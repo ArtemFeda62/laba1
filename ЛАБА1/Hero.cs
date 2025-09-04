@@ -13,6 +13,7 @@ namespace ЛАБА1
         public string Species { get; set; }//Раса
         public int Genre { get; set; }//Гендер
         public string Strange { get; set; }//Сила
+        public double Hp { get; set; } //Хп
         public string TypeOfDamage { get; set; }//Тип урона
         public Hero(int id, string name, string species, int genre, string strange, string typeOfDamage)
         {
