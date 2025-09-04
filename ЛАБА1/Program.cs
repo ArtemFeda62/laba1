@@ -14,9 +14,19 @@ namespace ЛАБА1
         [STAThread]
         static void Main()
         {
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
+            Console.WriteLine("1)Консольное приложение" +
+                "\n2)Виндоус форма");
+            string check = Console.ReadLine();
+            if (check == "1")
+            {
+                
+            }
+            else if (check == "2")
+            {
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                Application.Run(new Form1());
+            }
         }
     }
 }
