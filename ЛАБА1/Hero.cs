@@ -22,6 +22,7 @@ namespace ЛАБА1
             Genre = genre;
             Strange = strange;
             TypeOfDamage = typeOfDamage;
+            Hp = 100;
         }
     }
 }

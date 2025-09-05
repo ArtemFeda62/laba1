@@ -19,7 +19,8 @@ namespace ЛАБА1
             string check = Console.ReadLine();
             if (check == "1")
             {
-                
+                var consoleApp = new ConsoleInterface();
+                consoleApp.Run();
             }
             else if (check == "2")
             {
