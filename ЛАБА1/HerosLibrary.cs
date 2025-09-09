@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics.Eventing.Reader;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -10,19 +9,40 @@ namespace ЛАБА1
     internal class HerosLibrary
     {
         private List<Hero> heros = new List<Hero>();
+
+        /// <summary>
+        /// Добавляет героя в библиотеку
+        /// </summary>
+        /// <param name="hero">Объект героя для добавления</param>
         public void AddHero(Hero hero)
         {
             hero.Id = 1 + heros.Count;
             heros.Add(hero);
         }
+
+        /// <summary>
+        /// Получает героя по идентификатору
+        /// </summary>
+        /// <param name="id">Идентификатор героя</param>
+        /// <returns>Найденный герой или null если не найден</returns>
         public Hero GetHero(int id)
         {
             return heros.FirstOrDefault(h => h.Id == id);
         }
+
+        /// <summary>
+        /// Получает список всех героев
+        /// </summary>
+        /// <returns>Список всех героев</returns>
         public List<Hero> GetListHeros()
         {
             return heros;
         }
+
+        /// <summary>
+        /// Обновляет данные героя
+        /// </summary>
+        /// <param name="newHero">Объект с обновленными данными героя</param>
         public void UpdateHero(Hero newHero)
         {
             var hero = heros.FirstOrDefault(h => h.Id == newHero.Id);
@@ -37,14 +57,32 @@ namespace ЛАБА1
                 hero.Hp = newHero.Hp;
             }
         }
+
+        /// <summary>
+        /// Наносит урон герою
+        /// </summary>
+        /// <param name="id">Идентификатор героя</param>
+        /// <param name="damage">Количество урона</param>
         public void HitHero(int id, double damage)
         {
-            Hero _hero = heros.FirstOrDefault(h => h.Id ==id);
-            _hero.Hp -= damage;
+            Hero _hero = heros.FirstOrDefault(h => h.Id == id);
+            if (_hero != null)
+            {
+                _hero.Hp -= damage;
+            }
         }
+
+        /// <summary>
+        /// Удаляет героя из библиотеки
+        /// </summary>
+        /// <param name="id">Идентификатор героя для удаления</param>
         public void KillHero(int id)
         {
-            heros.Remove(heros.FirstOrDefault(h => h.Id == id));
+            var hero = heros.FirstOrDefault(h => h.Id == id);
+            if (hero != null)
+            {
+                heros.Remove(hero);
+            }
         }
     }
 }
