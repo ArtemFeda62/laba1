@@ -28,6 +28,9 @@ namespace ЛАБА1
             logic.CreateHero("Блум", "ЖЕНЩИНА", "Фея Винкс", 100, "Магический урон", 100);
             logic.CreateHero("Орк Генадий", "мужик", "Орк", 250, "Кидается какашками", 50);
             logic.CreateHero("Мальфит", "Бинарный", "Камень", 1000, "Камни", 1);
+            logic.CreateHero("Крип-маг", "мужик", "Крип", 10, "Магический урон", 1);
+            logic.CreateHero("Хорнет", "женщина", "паук", 6, "SHAWWWW!", 100000);
+
         }
 
         /// <summary>
@@ -70,7 +73,7 @@ namespace ЛАБА1
         }
 
         /// <summary>
-        /// Отображает всех героев в системе
+        /// Выдает список героев
         /// </summary>
         private void ShowAllHeroes()
         {
@@ -269,6 +272,7 @@ namespace ЛАБА1
         /// </summary>
         private void HitHero()
         {
+            ShowAllHeroes();
             try
             {
                 Console.Write("Введите ID героя: ");
@@ -294,7 +298,15 @@ namespace ЛАБА1
 
                 logic.HitHero(id, damage);
                 var updatedHero = logic.GetHero(id);
-                Console.WriteLine($"Урон нанесен! Новое HP: {updatedHero.Hp}");
+                if (updatedHero.Hp > 0)
+                {
+                    Console.WriteLine($"Урон нанесен! Новое HP: {updatedHero.Hp}");
+                }
+                else
+                {
+                    Console.WriteLine("Герой сдох! Вы нанесли смертельный урон");
+                }
+
             }
             catch (Exception ex)
             {
