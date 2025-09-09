@@ -99,7 +99,7 @@ namespace ЛАБА1
                 var name = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(name))
                 {
-                    Console.WriteLine("Имя не может быть пустым.");
+                    Console.WriteLine("Имя пустое.");
                     return;
                 }
 
@@ -107,7 +107,7 @@ namespace ЛАБА1
                 var species = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(species))
                 {
-                    Console.WriteLine("Раса не может быть пустой.");
+                    Console.WriteLine("Нужна расса , допустим негр.");
                     return;
                 }
 
@@ -115,14 +115,14 @@ namespace ЛАБА1
                 var genre = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(genre))
                 {
-                    Console.WriteLine("Гендер не может быть пустым.");
+                    Console.WriteLine("Личность небинарная?.");
                     return;
                 }
 
                 Console.Write("Сила: ");
                 if (!int.TryParse(Console.ReadLine(), out int strange) || strange < 0)
                 {
-                    Console.WriteLine("Некорректное значение силы. Должно быть положительное число.");
+                    Console.WriteLine("ОШибка.");
                     return;
                 }
 
@@ -130,14 +130,14 @@ namespace ЛАБА1
                 var damageType = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(damageType))
                 {
-                    Console.WriteLine("Тип урона не может быть пустым.");
+                    Console.WriteLine("Ошибка.");
                     return;
                 }
 
                 Console.Write("HP: ");
                 if (!double.TryParse(Console.ReadLine(), out double hp) || hp <= 0)
                 {
-                    Console.WriteLine("Некорректное значение HP. Должно быть положительное число.");
+                    Console.WriteLine("Error.");
                     return;
                 }
 
@@ -159,7 +159,7 @@ namespace ЛАБА1
             var name = Console.ReadLine();
             if (string.IsNullOrWhiteSpace(name))
             {
-                Console.WriteLine("Имя для поиска не может быть пустым.");
+                Console.WriteLine("Имя для поиска пустое.");
                 return;
             }
 
