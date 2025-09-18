@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ЛАБА1
 {
-    internal class Hero
+    public class Hero
     {
         public int Id { get; set; }
         public string Name { get; set; }
@@ -24,14 +24,15 @@ namespace ЛАБА1
         /// <param name="genre">Гендер героя</param>
         /// <param name="strange">Сила героя</param>
         /// <param name="typeOfDamage">Тип урона героя</param>
-        public Hero(string name, string species, string genre, int strange, string typeOfDamage)
+        /// <param name="hp">Здоровье героя</param>
+        public Hero(string name, string species, string genre, int strange, string typeOfDamage, double hp)
         {
             Name = name;
             Species = species;
             Genre = genre;
             Strange = strange;
             TypeOfDamage = typeOfDamage;
-            Hp = 100;
+            Hp = hp;
         }
     }
 }

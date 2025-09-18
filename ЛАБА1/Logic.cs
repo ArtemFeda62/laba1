@@ -29,9 +29,8 @@ namespace ЛАБА1
         /// <param name="strange">Сила героя</param>
         public void CreateHero(string name, string genre, string species, double hp, string typeofdamage, int strange)
         {
-            var Hero = new Hero(name, species, genre, strange, typeofdamage);
-            Hero.Hp = hp;
-            library.AddHero(Hero);
+            var hero = new Hero(name, species, genre, strange, typeofdamage, hp);
+            library.AddHero(hero);
         }
 
         /// <summary>
