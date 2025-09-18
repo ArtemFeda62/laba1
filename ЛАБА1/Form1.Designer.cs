@@ -1,4 +1,5 @@
-﻿using System.Reflection.Emit;
+﻿using System.Windows.Forms;
+using System.Reflection.Emit;
 
 namespace ЛАБА1
 {
@@ -8,7 +9,6 @@ namespace ЛАБА1
         /// Обязательная переменная конструктора.
         /// </summary>
         private System.ComponentModel.IContainer components = null;
-
         private DataGridView dataGridViewHeroes;
         private Button btnAddHero;
         private Button btnEditHero;
@@ -21,8 +21,8 @@ namespace ЛАБА1
         private Button btnLowHp;
         private Button btnStrongest;
         private Button btnRefresh;
-        private Label lblTotalCount;
-        private Label label1;
+        private System.Windows.Forms.Label lblTotalCount;
+        private System.Windows.Forms.Label label1;
         private Panel panel1;
         private Panel panel2;
 
