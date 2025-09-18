@@ -13,147 +13,156 @@ namespace ЛАБА1
     public partial class Form1 : Form
     {
         private Logic logic;
-        private BindingSource heroesBindingSource;
+        private List<Hero> currentHeroes;
 
         public Form1()
         {
             InitializeComponent();
             logic = new Logic();
-            heroesBindingSource = new BindingSource();
-            InitializeDataGridView();
+            currentHeroes = new List<Hero>();
+            LoadSampleData();
+            RefreshHeroesList();
         }
 
-        private void InitializeDataGridView()
+        private void LoadSampleData()
         {
-            // Настройка DataGridView
-            dataGridViewHeroes.AutoGenerateColumns = false;
-            dataGridViewHeroes.DataSource = heroesBindingSource;
-
-            // Добавление колонок
-            dataGridViewHeroes.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                DataPropertyName = "Id",
-                HeaderText = "ID",
-                Width = 50
-            });
-
-            dataGridViewHeroes.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                DataPropertyName = "Name",
-                HeaderText = "Имя",
-                Width = 150
-            });
-
-            dataGridViewHeroes.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                DataPropertyName = "Species",
-                HeaderText = "Раса",
-                Width = 100
-            });
-
-            dataGridViewHeroes.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                DataPropertyName = "Genre",
-                HeaderText = "Гендер",
-                Width = 80
-            });
-
-            dataGridViewHeroes.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                DataPropertyName = "Strange",
-                HeaderText = "Сила",
-                Width = 60
-            });
-
-            dataGridViewHeroes.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                DataPropertyName = "Hp",
-                HeaderText = "HP",
-                Width = 70
-            });
-
-            dataGridViewHeroes.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                DataPropertyName = "TypeOfDamage",
-                HeaderText = "Тип урона",
-                Width = 120
-            });
+            logic.CreateHero("Гоблин Гоша", "Транс", "Гоблин", 500, "Физический урон", 20);
+            logic.CreateHero("Блум", "ЖЕНЩИНА", "Фея Винкс", 100, "Магический урон", 100);
+            logic.CreateHero("Орк Генадий", "мужик", "Орк", 250, "Кидается какашками", 50);
+            logic.CreateHero("Мальфит", "Бинарный", "Камень", 1000, "Камни", 1);
+            logic.CreateHero("Крип-маг", "мужик", "Крип", 10, "Магический урон", 1);
+            logic.CreateHero("Хорнет", "женщина", "паук", 6, "SHAWWWW!", 100000);
         }
 
-        private void LoadHeroes()
+        private void RefreshHeroesList()
         {
-            var heroes = logic.GetListHeros();
-            heroesBindingSource.DataSource = heroes;
-            lblTotalCount.Text = $"Всего героев: {heroes.Count}";
+            currentHeroes = logic.GetListHeros();
+            listBoxHeroes.Items.Clear();
+
+            foreach (var hero in currentHeroes)
+            {
+                listBoxHeroes.Items.Add($"{hero.Id}: {hero.Name} - {hero.Species} ({hero.Hp} HP)");
+            }
         }
 
-        private void Form1_Load(object sender, EventArgs e)
+        private void btnShowAll_Click(object sender, EventArgs e)
         {
-            LoadHeroes();
+            RefreshHeroesList();
+            txtOutput.Text = "Все герои:\n";
+            foreach (var hero in currentHeroes)
+            {
+                txtOutput.Text += $"{hero.Id}) {hero.Name} - {hero.Species} ({hero.Hp} HP)\n";
+            }
         }
 
         private void btnAddHero_Click(object sender, EventArgs e)
         {
-            using (var addForm = new AddEditHeroForm())
+            using (var form = new AddHeroForm())
             {
-                if (addForm.ShowDialog() == DialogResult.OK)
+                if (form.ShowDialog() == DialogResult.OK)
                 {
-                    try
-                    {
-                        logic.CreateHero(
-                            addForm.HeroName,
-                            addForm.Genre,
-                            addForm.Species,
-                            addForm.Hp,
-                            addForm.DamageType,
-                            addForm.Strange
-                        );
-                        LoadHeroes();
-                        MessageBox.Show("Герой успешно добавлен!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка при добавлении героя: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
+                    logic.CreateHero(form.HeroName, form.HeroGenre, form.HeroSpecies,
+                                   form.HeroHp, form.HeroDamageType, form.HeroStrange);
+                    RefreshHeroesList();
+                    txtOutput.Text = "Герой успешно добавлен!";
                 }
             }
         }
 
-        private void btnEditHero_Click(object sender, EventArgs e)
+        private void btnFindByName_Click(object sender, EventArgs e)
         {
-            if (dataGridViewHeroes.SelectedRows.Count == 0)
+            if (string.IsNullOrWhiteSpace(txtSearch.Text))
             {
-                MessageBox.Show("Выберите героя для редактирования", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Введите имя для поиска");
                 return;
             }
 
-            var selectedHero = (Hero)dataGridViewHeroes.SelectedRows[0].DataBoundItem;
+            var foundHeroes = logic.FindHeroesByName(txtSearch.Text);
+            txtOutput.Text = $"Найдено героев: {foundHeroes.Count}\n";
 
-            using (var editForm = new AddEditHeroForm(selectedHero))
+            foreach (var hero in foundHeroes)
             {
-                if (editForm.ShowDialog() == DialogResult.OK)
-                {
-                    try
-                    {
-                        var updatedHero = new Hero(
-                            editForm.HeroName,
-                            editForm.Species,
-                            editForm.Genre,
-                            editForm.Strange,
-                            editForm.DamageType
-                        )
-                        {
-                            Id = selectedHero.Id,
-                            Hp = editForm.Hp
-                        };
+                txtOutput.Text += $"{hero.Id}) {hero.Name} - {hero.Species} ({hero.Hp} HP)\n";
+            }
+        }
 
-                        logic.UpdateHero(updatedHero);
-                        LoadHeroes();
-                        MessageBox.Show("Герой успешно обновлен!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                    }
-                    catch (Exception ex)
+        private void btnGroupBySpecies_Click(object sender, EventArgs e)
+        {
+            var grouped = logic.GroupHeroesBySpecies();
+            txtOutput.Text = "Группировка по расам:\n";
+
+            foreach (var group in grouped)
+            {
+                txtOutput.Text += $"\n--- {group.Key} ---\n";
+                foreach (var hero in group.Value)
+                {
+                    txtOutput.Text += $"  {hero.Name} - Сила: {hero.Strange}, HP: {hero.Hp}\n";
+                }
+            }
+        }
+
+        private void btnGroupByDamage_Click(object sender, EventArgs e)
+        {
+            var grouped = logic.GroupHeroesByDamageType();
+            txtOutput.Text = "Группировка по типу урона:\n";
+
+            foreach (var group in grouped)
+            {
+                txtOutput.Text += $"\n--- {group.Key} ---\n";
+                foreach (var hero in group.Value)
+                {
+                    txtOutput.Text += $"  {hero.Name} ({hero.Species}) - HP: {hero.Hp}\n";
+                }
+            }
+        }
+
+        private void btnWounded_Click(object sender, EventArgs e)
+        {
+            var wounded = logic.GetHeroesWithLowHp(50);
+            txtOutput.Text = "Раненые герои (HP < 50):\n";
+
+            foreach (var hero in wounded)
+            {
+                txtOutput.Text += $"{hero.Id}) {hero.Name} - {hero.Hp} HP\n";
+            }
+        }
+
+        private void btnStrongest_Click(object sender, EventArgs e)
+        {
+            var strongest = logic.GetStrongestHeroes(3);
+            txtOutput.Text = "Топ-3 самых сильных героя:\n";
+
+            foreach (var hero in strongest)
+            {
+                txtOutput.Text += $"{hero.Id}) {hero.Name} - Сила: {hero.Strange}, HP: {hero.Hp}\n";
+            }
+        }
+
+        private void btnHitHero_Click(object sender, EventArgs e)
+        {
+            if (listBoxHeroes.SelectedIndex == -1)
+            {
+                MessageBox.Show("Выберите героя из списка");
+                return;
+            }
+
+            var selectedHero = currentHeroes[listBoxHeroes.SelectedIndex];
+
+            using (var form = new HitHeroForm(selectedHero))
+            {
+                if (form.ShowDialog() == DialogResult.OK)
+                {
+                    logic.HitHero(selectedHero.Id, form.DamageAmount);
+                    RefreshHeroesList();
+
+                    var updatedHero = logic.GetHero(selectedHero.Id);
+                    if (updatedHero.Hp > 0)
                     {
-                        MessageBox.Show($"Ошибка при обновлении героя: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                        txtOutput.Text = $"Урон нанесен! Новое HP: {updatedHero.Hp}";
+                    }
+                    else
+                    {
+                        txtOutput.Text = "Герой сдох! Вы нанесли смертельный урон";
                     }
                 }
             }
@@ -161,151 +170,23 @@ namespace ЛАБА1
 
         private void btnDeleteHero_Click(object sender, EventArgs e)
         {
-            if (dataGridViewHeroes.SelectedRows.Count == 0)
+            if (listBoxHeroes.SelectedIndex == -1)
             {
-                MessageBox.Show("Выберите героя для удаления", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
+                MessageBox.Show("Выберите героя из списка");
                 return;
             }
 
-            var selectedHero = (Hero)dataGridViewHeroes.SelectedRows[0].DataBoundItem;
+            var selectedHero = currentHeroes[listBoxHeroes.SelectedIndex];
 
-            var result = MessageBox.Show(
-                $"Вы уверены, что хотите удалить героя '{selectedHero.Name}'?",
-                "Подтверждение удаления",
-                MessageBoxButtons.YesNo,
-                MessageBoxIcon.Question
-            );
+            var result = MessageBox.Show($"Вы уверены, что хотите удалить героя '{selectedHero.Name}'?",
+                                       "Подтверждение удаления",
+                                       MessageBoxButtons.YesNo);
 
             if (result == DialogResult.Yes)
             {
-                try
-                {
-                    logic.KillHero(selectedHero.Id);
-                    LoadHeroes();
-                    MessageBox.Show("Герой успешно удален!", "Успех", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка при удалении героя: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
-            }
-        }
-
-        private void btnHitHero_Click(object sender, EventArgs e)
-        {
-            if (dataGridViewHeroes.SelectedRows.Count == 0)
-            {
-                MessageBox.Show("Выберите героя для нанесения урона", "Внимание", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                return;
-            }
-
-            var selectedHero = (Hero)dataGridViewHeroes.SelectedRows[0].DataBoundItem;
-
-            using (var hitForm = new HitHeroForm(selectedHero))
-            {
-                if (hitForm.ShowDialog() == DialogResult.OK)
-                {
-                    try
-                    {
-                        logic.HitHero(selectedHero.Id, hitForm.Damage);
-                        LoadHeroes();
-
-                        var updatedHero = logic.GetHero(selectedHero.Id);
-                        if (updatedHero.Hp <= 0)
-                        {
-                            MessageBox.Show("Герой получил смертельный урон и был удален!", "Урон", MessageBoxButtons.OK, MessageBoxIcon.Warning);
-                        }
-                        else
-                        {
-                            MessageBox.Show($"Урон нанесен! Новое HP: {updatedHero.Hp}", "Урон", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        MessageBox.Show($"Ошибка при нанесении урона: {ex.Message}", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    }
-                }
-            }
-        }
-
-        private void btnSearch_Click(object sender, EventArgs e)
-        {
-            var searchText = txtSearch.Text.Trim();
-            if (string.IsNullOrEmpty(searchText))
-            {
-                LoadHeroes();
-                return;
-            }
-
-            var foundHeroes = logic.FindHeroesByName(searchText);
-            heroesBindingSource.DataSource = foundHeroes;
-            lblTotalCount.Text = $"Найдено героев: {foundHeroes.Count}";
-        }
-
-        private void btnGroupBySpecies_Click(object sender, EventArgs e)
-        {
-            var groupedHeroes = logic.GroupHeroesBySpecies();
-            ShowGroupedResults("Группировка по расам", groupedHeroes);
-        }
-
-        private void btnGroupByDamage_Click(object sender, EventArgs e)
-        {
-            var groupedHeroes = logic.GroupHeroesByDamageType();
-            ShowGroupedResults("Группировка по типу урона", groupedHeroes);
-        }
-
-        private void btnLowHp_Click(object sender, EventArgs e)
-        {
-            var lowHpHeroes = logic.GetHeroesWithLowHp(50);
-            heroesBindingSource.DataSource = lowHpHeroes;
-            lblTotalCount.Text = $"Героев с HP ≤ 50: {lowHpHeroes.Count}";
-        }
-
-        private void btnStrongest_Click(object sender, EventArgs e)
-        {
-            var strongestHeroes = logic.GetStrongestHeroes(3);
-            heroesBindingSource.DataSource = strongestHeroes;
-            lblTotalCount.Text = "Топ-3 самых сильных героя";
-        }
-
-        private void ShowGroupedResults(string title, Dictionary<string, List<Hero>> groupedData)
-        {
-            var sb = new StringBuilder();
-            sb.AppendLine(title);
-            sb.AppendLine("======================");
-
-            foreach (var group in groupedData)
-            {
-                sb.AppendLine($"\n--- {group.Key} ({group.Value.Count}) ---");
-                foreach (var hero in group.Value)
-                {
-                    sb.AppendLine($"  {hero.Name} - HP: {hero.Hp}, Сила: {hero.Strange}");
-                }
-            }
-
-            MessageBox.Show(sb.ToString(), title, MessageBoxButtons.OK, MessageBoxIcon.Information);
-        }
-
-        private void btnRefresh_Click(object sender, EventArgs e)
-        {
-            LoadHeroes();
-            txtSearch.Clear();
-        }
-
-        private void dataGridViewHeroes_SelectionChanged(object sender, EventArgs e)
-        {
-            bool hasSelection = dataGridViewHeroes.SelectedRows.Count > 0;
-            btnEditHero.Enabled = hasSelection;
-            btnDeleteHero.Enabled = hasSelection;
-            btnHitHero.Enabled = hasSelection;
-        }
-
-        private void txtSearch_KeyPress(object sender, KeyPressEventArgs e)
-        {
-            if (e.KeyChar == (char)Keys.Enter)
-            {
-                btnSearch.PerformClick();
-                e.Handled = true;
+                logic.KillHero(selectedHero.Id);
+                RefreshHeroesList();
+                txtOutput.Text = "Герой успешно удален!";
             }
         }
     }
