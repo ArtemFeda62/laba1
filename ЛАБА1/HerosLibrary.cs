@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace ЛАБА1
 {
-    internal class HerosLibrary
+    public class HerosLibrary
     {
         private List<Hero> heros = new List<Hero>();
 

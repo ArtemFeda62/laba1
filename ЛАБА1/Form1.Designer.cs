@@ -1,5 +1,6 @@
-﻿using System.Reflection.Emit;
+﻿using System;
 using System.Drawing;
+using System.Reflection.Emit;
 using System.Windows.Forms;
 
 namespace ЛАБА1
@@ -15,6 +16,11 @@ namespace ЛАБА1
                 components.Dispose();
             }
             base.Dispose(disposing);
+        }
+        private void btnRefresh_Click(object sender, EventArgs e)
+        {
+            RefreshHeroesList();
+            txtOutput.Text = "Данные обновлены!";
         }
 
         #region Windows Form Designer generated code

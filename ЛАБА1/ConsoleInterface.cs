@@ -11,26 +11,11 @@ namespace ЛАБА1
         private Logic logic;
 
         /// <summary>
-        /// Инициализирует консольный интерфейс и добавляет тестовые данные
+        /// Инициализирует консольный интерфейс с общей логикой
         /// </summary>
         public ConsoleInterface()
         {
-            logic = new Logic();
-            AddSampleData();
-        }
-
-        /// <summary>
-        /// Добавляет тестовых героев в систему
-        /// </summary>
-        private void AddSampleData()
-        {
-            logic.CreateHero("Гоблин Гоша", "Транс", "Гоблин", 500, "Физический урон", 20);
-            logic.CreateHero("Блум", "ЖЕНЩИНА", "Фея Винкс", 100, "Магический урон", 100);
-            logic.CreateHero("Орк Генадий", "мужик", "Орк", 250, "Кидается какашками", 50);
-            logic.CreateHero("Мальфит", "Бинарный", "Камень", 1000, "Камни", 1);
-            logic.CreateHero("Крип-маг", "мужик", "Крип", 10, "Магический урон", 1);
-            logic.CreateHero("Хорнет", "женщина", "паук", 6, "SHAWWWW!", 100000);
-
+            logic = new Logic(); 
         }
 
         /// <summary>
@@ -50,7 +35,7 @@ namespace ЛАБА1
                 Console.WriteLine("7. Топ-3 самых сильных героя");
                 Console.WriteLine("8. Нанести урон герою");
                 Console.WriteLine("9. Убить героя");
-                Console.WriteLine("0. Выход");
+                Console.WriteLine("0. Выход в главное меню");
                 Console.Write("Выберите действие: ");
 
                 var choice = Console.ReadLine();
@@ -66,10 +51,11 @@ namespace ЛАБА1
                     case "7": ShowStrongestHeroes(); break;
                     case "8": HitHero(); break;
                     case "9": KillHero(); break;
-                    case "0": return;
+                    case "0": return; // Возврат в главное меню
                     default: Console.WriteLine("Неверный выбор. Попробуйте снова."); break;
                 }
             }
+
         }
 
         /// <summary>

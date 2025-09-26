@@ -20,18 +20,7 @@ namespace ЛАБА1
             InitializeComponent();
             logic = new Logic();
             currentHeroes = new List<Hero>();
-            LoadSampleData();
             RefreshHeroesList();
-        }
-
-        private void LoadSampleData()
-        {
-            logic.CreateHero("Гоблин Гоша", "Транс", "Гоблин", 500, "Физический урон", 20);
-            logic.CreateHero("Блум", "ЖЕНЩИНА", "Фея Винкс", 100, "Магический урон", 100);
-            logic.CreateHero("Орк Генадий", "мужик", "Орк", 250, "Кидается какашками", 50);
-            logic.CreateHero("Мальфит", "Бинарный", "Камень", 1000, "Камни", 1);
-            logic.CreateHero("Крип-маг", "мужик", "Крип", 10, "Магический урон", 1);
-            logic.CreateHero("Хорнет", "женщина", "паук", 6, "SHAWWWW!", 100000);
         }
 
         private void RefreshHeroesList()
@@ -44,7 +33,11 @@ namespace ЛАБА1
                 listBoxHeroes.Items.Add($"{hero.Id}: {hero.Name} - {hero.Species} ({hero.Hp} HP)");
             }
         }
-
+        protected override void OnActivated(EventArgs e)
+        {
+            base.OnActivated(e);
+            RefreshHeroesList();
+        }
         private void btnShowAll_Click(object sender, EventArgs e)
         {
             RefreshHeroesList();
