@@ -33,7 +33,6 @@ namespace ЛАБА1
 
         private static void LoadSampleData()
         {
-            // Временная логика для загрузки данных
             var tempLogic = new Logic(_sharedLibrary);
             tempLogic.CreateHero("Гоблин Гоша", "Транс", "Гоблин", 500, "Физический урон", 20);
             tempLogic.CreateHero("Блум", "ЖЕНЩИНА", "Фея Винкс", 100, "Магический урон", 100);

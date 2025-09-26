@@ -71,7 +71,6 @@ namespace ЛАБА1
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Создаем форму и запускаем ее
             using (var form = new Form1())
             {
                 Application.Run(form);

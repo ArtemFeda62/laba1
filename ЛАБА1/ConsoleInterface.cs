@@ -51,7 +51,7 @@ namespace ЛАБА1
                     case "7": ShowStrongestHeroes(); break;
                     case "8": HitHero(); break;
                     case "9": KillHero(); break;
-                    case "0": return; // Возврат в главное меню
+                    case "0": return; 
                     default: Console.WriteLine("Неверный выбор. Попробуйте снова."); break;
                 }
             }
