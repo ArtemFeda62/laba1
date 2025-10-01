@@ -15,7 +15,6 @@ namespace ЛАБА1
         {
             library = SharedData.GetSharedLibrary();
         }
-
         /// <summary>
         /// Инициализирует новый экземпляр логики с указанной библиотекой
         /// </summary>
@@ -24,7 +23,6 @@ namespace ЛАБА1
         {
             library = sharedLibrary;
         }
-
         // Все остальные методы остаются без изменений...
         /// <summary>
         /// Создает нового героя и добавляет его в библиотеку

@@ -69,8 +69,6 @@ namespace ЛАБА1
         static void RunWindowsForm()
         {
             Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-
             using (var form = new Form1())
             {
                 Application.Run(form);
