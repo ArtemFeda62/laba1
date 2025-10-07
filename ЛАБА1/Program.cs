@@ -1,78 +1,108 @@
 ﻿using System;
+using System.Threading;
 using System.Windows.Forms;
 
 namespace ЛАБА1
 {
     internal static class Program
     {
+        private static Form1 _mainForm;
+        private static ConsoleInterface _consoleInterface;
+        private static Thread _formThread;
+        private static Thread _consoleThread;
+        private static bool _isRunning = true;
+
         /// <summary>
         /// Главная точка входа для приложения.
         /// </summary>
         [STAThread]
         static void Main()
         {
-            try
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+
+            StartBothInterfaces();
+
+            // Ждем завершения работы
+            while (_isRunning)
             {
-                bool running = true;
+                Thread.Sleep(100);
 
-                while (running)
+                // Проверяем, живы ли оба интерфейса
+                if ((_formThread == null || !_formThread.IsAlive) &&
+                    (_consoleThread == null || !_consoleThread.IsAlive))
                 {
-                    Console.Clear();
-                    Console.WriteLine("1) Консольное приложение");
-                    Console.WriteLine("2) Виндоус форма");
-                    Console.WriteLine("3) Сбросить данные к исходным");
-                    Console.WriteLine("4) Выход");
-                    Console.Write("Выберите опцию: ");
-
-                    string choice = Console.ReadLine();
-
-                    switch (choice)
-                    {
-                        case "1":
-                            RunConsoleApp();
-                            break;
-                        case "2":
-                            RunWindowsForm();
-                            break;
-                        case "3":
-                            SharedData.ResetData();
-                            Console.WriteLine("Данные сброшены к исходным!");
-                            Console.WriteLine("Нажмите любую клавишу для продолжения...");
-                            Console.ReadKey();
-                            break;
-                        case "4":
-                            running = false;
-                            Console.WriteLine("Выход из программы...");
-                            break;
-                        default:
-                            Console.WriteLine("Неверный выбор. Попробуйте снова.");
-                            Console.WriteLine("Нажмите любую клавишу для продолжения...");
-                            Console.ReadKey();
-                            break;
-                    }
+                    _isRunning = false;
                 }
             }
-            catch (Exception ex)
+
+            Console.WriteLine("Приложение завершено.");
+        }
+
+        public static void StartBothInterfaces()
+        {
+            // Запускаем форму в отдельном потоке
+            _formThread = new Thread(() =>
             {
-                Console.WriteLine($"Произошла ошибка: {ex.Message}");
-                Console.WriteLine("Нажмите любую клавишу для выхода...");
-                Console.ReadKey();
+                try
+                {
+                    _mainForm = new Form1();
+                    _mainForm.FormClosed += (s, args) =>
+                    {
+                        Application.ExitThread();
+                        _isRunning = false;
+                    };
+                    Application.Run(_mainForm);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка в форме: {ex.Message}");
+                }
+            });
+            _formThread.SetApartmentState(ApartmentState.STA);
+            _formThread.IsBackground = true;
+            _formThread.Start();
+
+            // Запускаем консоль в отдельном потоке
+            _consoleThread = new Thread(() =>
+            {
+                try
+                {
+                    _consoleInterface = new ConsoleInterface();
+                    _consoleInterface.Run();
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка в консоли: {ex.Message}");
+                }
+            });
+            _consoleThread.IsBackground = true;
+            _consoleThread.Start();
+        }
+
+        public static void RefreshFormData()
+        {
+            // Обновляем данные в форме из любого потока
+            if (_mainForm != null && !_mainForm.IsDisposed && _mainForm.IsHandleCreated)
+            {
+                try
+                {
+                    _mainForm.Invoke(new Action(() =>
+                    {
+                        if (!_mainForm.IsDisposed)
+                            _mainForm.RefreshHeroesList();
+                    }));
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Ошибка обновления формы: {ex.Message}");
+                }
             }
         }
 
-        static void RunConsoleApp()
+        public static void StopApplication()
         {
-            var consoleApp = new ConsoleInterface();
-            consoleApp.Run();
-        }
-
-        static void RunWindowsForm()
-        {
-            Application.EnableVisualStyles();
-            using (var form = new Form1())
-            {
-                Application.Run(form);
-            }
+            _isRunning = false;
         }
     }
 }

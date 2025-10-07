@@ -14,30 +14,63 @@ namespace ЛАБА1
     {
         private Logic logic;
         private List<Hero> currentHeroes;
+        private System.Windows.Forms.Timer refreshTimer;
 
         public Form1()
         {
             InitializeComponent();
             logic = new Logic();
             currentHeroes = new List<Hero>();
+
+            // Настраиваем таймер для автоматического обновления
+            refreshTimer = new System.Windows.Forms.Timer();
+            refreshTimer.Interval = 500; // Обновление каждые 500 мс
+            refreshTimer.Tick += (s, e) => SafeRefreshHeroesList();
+            refreshTimer.Start();
+
             RefreshHeroesList();
+
+            this.Text = "Система управления героями (Одновременно с консолью)";
         }
 
-        private void RefreshHeroesList()
+        private void SafeRefreshHeroesList()
         {
-            currentHeroes = logic.GetListHeros();
-            listBoxHeroes.Items.Clear();
-
-            foreach (var hero in currentHeroes)
+            if (!this.IsDisposed && this.IsHandleCreated)
             {
-                listBoxHeroes.Items.Add($"{hero.Id}: {hero.Name} - {hero.Species} ({hero.Hp} HP)");
+                this.Invoke(new Action(() => RefreshHeroesList()));
             }
         }
+
+        public void RefreshHeroesList()
+        {
+            try
+            {
+                var previousCount = currentHeroes?.Count ?? 0;
+                currentHeroes = logic.GetListHeros();
+
+                // Обновляем ListBox только если данные изменились
+                if (previousCount != currentHeroes.Count ||
+                    listBoxHeroes.Items.Count != currentHeroes.Count)
+                {
+                    listBoxHeroes.Items.Clear();
+                    foreach (var hero in currentHeroes)
+                    {
+                        listBoxHeroes.Items.Add($"{hero.Id}: {hero.Name} - {hero.Species} ({hero.Hp} HP)");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // Игнорируем ошибки при обновлении
+            }
+        }
+
         protected override void OnActivated(EventArgs e)
         {
             base.OnActivated(e);
             RefreshHeroesList();
         }
+
         private void btnShowAll_Click(object sender, EventArgs e)
         {
             RefreshHeroesList();
@@ -181,6 +214,19 @@ namespace ЛАБА1
                 RefreshHeroesList();
                 txtOutput.Text = "Герой успешно удален!";
             }
+        }
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
+        {
+            refreshTimer?.Stop();
+            Program.StopApplication();
+            base.OnFormClosed(e);
+        }
+
+        private void btnRefreshh_Click(object sender, EventArgs e)
+        {
+            RefreshHeroesList();
+            txtOutput.Text = "Данные обновлены!";
         }
     }
 }
