@@ -326,10 +326,7 @@ namespace ЛАБА1
                 }
                 logic.HitHero(id, damage);
                 var updatedHero = logic.GetHero(id);
-
-                // Обновляем форму
                 Program.RefreshFormData();
-
                 if (updatedHero.Hp > 0)
                 {
                     Console.WriteLine($"Урон нанесен! Новое HP: {updatedHero.Hp}");

@@ -23,26 +23,19 @@ namespace ЛАБА1
             Application.SetCompatibleTextRenderingDefault(false);
 
             StartBothInterfaces();
-
-            // Ждем завершения работы
             while (_isRunning)
             {
                 Thread.Sleep(100);
-
-                // Проверяем, живы ли оба интерфейса
                 if ((_formThread == null || !_formThread.IsAlive) &&
                     (_consoleThread == null || !_consoleThread.IsAlive))
                 {
                     _isRunning = false;
                 }
             }
-
             Console.WriteLine("Приложение завершено.");
         }
-
         public static void StartBothInterfaces()
         {
-            // Запускаем форму в отдельном потоке
             _formThread = new Thread(() =>
             {
                 try
@@ -63,8 +56,6 @@ namespace ЛАБА1
             _formThread.SetApartmentState(ApartmentState.STA);
             _formThread.IsBackground = true;
             _formThread.Start();
-
-            // Запускаем консоль в отдельном потоке
             _consoleThread = new Thread(() =>
             {
                 try
@@ -83,7 +74,6 @@ namespace ЛАБА1
 
         public static void RefreshFormData()
         {
-            // Обновляем данные в форме из любого потока
             if (_mainForm != null && !_mainForm.IsDisposed && _mainForm.IsHandleCreated)
             {
                 try
@@ -100,12 +90,9 @@ namespace ЛАБА1
                 }
             }
         }
-
         public static void StopApplication()
         {
             _isRunning = false;
         }
-
-
     }
 }

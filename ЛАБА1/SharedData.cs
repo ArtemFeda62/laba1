@@ -13,7 +13,6 @@ namespace ЛАБА1
             _sharedLibrary = new HerosLibrary();
             LoadSampleData();
         }
-
         public static HerosLibrary GetSharedLibrary()
         {
             lock (_lockObject)
