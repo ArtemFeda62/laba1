@@ -23,7 +23,7 @@ namespace ЛАБА1
             RefreshHeroesList();
         }
 
-        private void RefreshHeroesList()
+        public void RefreshHeroesList()
         {
             currentHeroes = logic.GetListHeros();
             listBoxHeroes.Items.Clear();
