@@ -13,6 +13,9 @@ namespace ЛАБА1
         private Logic logic;
         private bool _isRunning;
 
+        /// <summary>
+        /// Инициализирует новый экземпляр консольного интерфейса
+        /// </summary>
         public ConsoleInterface()
         {
             logic = new Logic();
@@ -21,6 +24,9 @@ namespace ЛАБА1
             SetupFileWatcher();
         }
 
+        /// <summary>
+        /// Настраивает отслеживание изменений CSV файла с данными героев
+        /// </summary>
         private void SetupFileWatcher()
         {
             var watcher = new FileSystemWatcher
@@ -30,15 +36,19 @@ namespace ЛАБА1
             watcher.EnableRaisingEvents = true;
         }
 
+        /// <summary>
+        /// Обрабатывает события изменения CSV файла с данными
+        /// </summary>
+        /// <param name="sender">Источник события</param>
+        /// <param name="e">Данные о изменении файла</param>
         private void OnDataFileChanged(object sender, FileSystemEventArgs e)
         {
             SharedData.ReloadFromFile();
             Program.RefreshFormData();
         }
 
-        // Все остальные методы остаются без изменений
         /// <summary>
-        /// Запускает главный цикл приложения
+        /// Запускает главный цикл обработки команд консольного интерфейса
         /// </summary>
         public void Run()
         {
@@ -87,13 +97,16 @@ namespace ЛАБА1
             }
         }
 
+        /// <summary>
+        /// Останавливает работу консольного интерфейса
+        /// </summary>
         public void Stop()
         {
             _isRunning = false;
         }
 
         /// <summary>
-        /// Выдает список героев
+        /// Отображает список всех героев в системе
         /// </summary>
         private void ShowAllHeroes()
         {
@@ -114,7 +127,7 @@ namespace ЛАБА1
         }
 
         /// <summary>
-        /// Добавляет нового героя через консоль
+        /// Добавляет нового героя через ввод данных в консоли
         /// </summary>
         private void AddNewHero()
         {
@@ -184,7 +197,7 @@ namespace ЛАБА1
         }
 
         /// <summary>
-        /// Ищет героев по имени
+        /// Выполняет поиск героев по имени (регистронезависимый)
         /// </summary>
         private void FindByName()
         {
@@ -215,7 +228,7 @@ namespace ЛАБА1
         }
 
         /// <summary>
-        /// Отображает героев с группировкой по расам
+        /// Отображает героев с группировкой по расовой принадлежности
         /// </summary>
         private void ShowBySpecies()
         {
@@ -240,7 +253,7 @@ namespace ЛАБА1
         }
 
         /// <summary>
-        /// Отображает героев с группировкой по типу урона
+        /// Отображает героев с группировкой по типу наносимого урона
         /// </summary>
         private void ShowByDamageType()
         {
@@ -265,7 +278,7 @@ namespace ЛАБА1
         }
 
         /// <summary>
-        /// Отображает героев с низким здоровьем
+        /// Отображает список героев с низким уровнем здоровья (менее 50 HP)
         /// </summary>
         private void ShowWoundedHeroes()
         {
@@ -287,7 +300,7 @@ namespace ЛАБА1
         }
 
         /// <summary>
-        /// Отображает самых сильных героев
+        /// Отображает топ-3 героев с наибольшим показателем силы
         /// </summary>
         private void ShowStrongestHeroes()
         {
@@ -309,7 +322,7 @@ namespace ЛАБА1
         }
 
         /// <summary>
-        /// Наносит урон выбранному герою
+        /// Наносит урон выбранному герою и обновляет его здоровье
         /// </summary>
         private void HitHero()
         {
@@ -362,7 +375,7 @@ namespace ЛАБА1
         }
 
         /// <summary>
-        /// Удаляет героя из системы
+        /// Удаляет героя из системы по указанному идентификатору
         /// </summary>
         private void KillHero()
         {
@@ -406,6 +419,9 @@ namespace ЛАБА1
             WaitForContinue();
         }
 
+        /// <summary>
+        /// Ожидает нажатия любой клавиши для продолжения работы
+        /// </summary>
         private void WaitForContinue()
         {
             Console.WriteLine("\nНажмите любую клавишу для продолжения...");
