@@ -27,10 +27,6 @@ namespace ЛАБА1
             {
                 Path = Directory.GetCurrentDirectory(),Filter = "heroes_data.csv",NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName
             };
-            watcher.Changed += OnDataFileChanged;
-            watcher.Created += OnDataFileChanged;
-            watcher.Deleted += OnDataFileChanged;
-            watcher.Renamed += OnDataFileChanged;
             watcher.EnableRaisingEvents = true;
         }
 
