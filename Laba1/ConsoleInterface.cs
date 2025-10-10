@@ -1,57 +1,46 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
-namespace ЛАБА1
+namespace Laba1
 {
     internal class ConsoleInterface
     {
         private Logic logic;
-        private bool _isRunning;
 
+        /// <summary>
+        /// Инициализирует консольный интерфейс и добавляет тестовые данные
+        /// </summary>
         public ConsoleInterface()
         {
             logic = new Logic();
-            _isRunning = false;
-
-            SetupFileWatcher();
+            AddSampleData();
         }
 
-        private void SetupFileWatcher()
+        /// <summary>
+        /// Добавляет тестовых героев в систему
+        /// </summary>
+        private void AddSampleData()
         {
-            var watcher = new FileSystemWatcher
-            {
-                Path = Directory.GetCurrentDirectory(),Filter = "heroes_data.csv",NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName
-            };
-            watcher.Changed += OnDataFileChanged;
-            watcher.Created += OnDataFileChanged;
-            watcher.Deleted += OnDataFileChanged;
-            watcher.Renamed += OnDataFileChanged;
-            watcher.EnableRaisingEvents = true;
+            logic.CreateHero("Гоблин Гоша", "Транс", "Гоблин", 500, "Физический урон", 20);
+            logic.CreateHero("Блум", "ЖЕНЩИНА", "Фея Винкс", 100, "Магический урон", 100);
+            logic.CreateHero("Орк Генадий", "мужик", "Орк", 250, "Кидается какашками", 50);
+            logic.CreateHero("Мальфит", "Бинарный", "Камень", 1000, "Камни", 1);
+            logic.CreateHero("Крип-маг", "мужик", "Крип", 10, "Магический урон", 1);
+            logic.CreateHero("Хорнет", "женщина", "паук", 6, "SHAWWWW!", 100000);
+
         }
 
-        private void OnDataFileChanged(object sender, FileSystemEventArgs e)
-        {
-            SharedData.ReloadFromFile();
-            Program.RefreshFormData();
-        }
-
-        // Все остальные методы остаются без изменений
         /// <summary>
         /// Запускает главный цикл приложения
         /// </summary>
         public void Run()
         {
-            _isRunning = true;
-
-            while (_isRunning)
+            while (true)
             {
-                Console.Clear();
-                Console.WriteLine("═══════════════════════════════════════");
+                Console.WriteLine("\n=-=-= СИСТЕМА УПРАВЛЕНИЯ ГЕРОЯМИ =-=-=");
                 Console.WriteLine("1. Показать всех героев");
                 Console.WriteLine("2. Добавить героя");
                 Console.WriteLine("3. Найти героя по имени");
@@ -61,8 +50,7 @@ namespace ЛАБА1
                 Console.WriteLine("7. Топ-3 самых сильных героя");
                 Console.WriteLine("8. Нанести урон герою");
                 Console.WriteLine("9. Убить героя");
-                Console.WriteLine("0. Выход из консоли");
-                Console.WriteLine("═══════════════════════════════════════");
+                Console.WriteLine("0. Выход");
                 Console.Write("Выберите действие: ");
 
                 var choice = Console.ReadLine();
@@ -78,22 +66,10 @@ namespace ЛАБА1
                     case "7": ShowStrongestHeroes(); break;
                     case "8": HitHero(); break;
                     case "9": KillHero(); break;
-                    case "0":
-                        _isRunning = false;
-                        Console.WriteLine("Консольный интерфейс завершает работу...");
-                        Thread.Sleep(1000);
-                        return;
-                    default:
-                        Console.WriteLine("Неверный выбор. Попробуйте снова.");
-                        WaitForContinue();
-                        break;
+                    case "0": return;
+                    default: Console.WriteLine("Неверный выбор. Попробуйте снова."); break;
                 }
             }
-        }
-
-        public void Stop()
-        {
-            _isRunning = false;
         }
 
         /// <summary>
@@ -106,15 +82,13 @@ namespace ЛАБА1
             if (heroes.Count == 0)
             {
                 Console.WriteLine("Героев не найдено.");
+                return;
             }
-            else
+
+            foreach (var hero in heroes)
             {
-                foreach (var hero in heroes)
-                {
-                    Console.WriteLine($"{hero.Id}) {hero.Name} - {hero.Species} ({hero.Hp} HP)");
-                }
+                Console.WriteLine($"{hero.Id}) {hero.Name} - {hero.Species} ({hero.Hp} HP)");
             }
-            WaitForContinue();
         }
 
         /// <summary>
@@ -129,7 +103,6 @@ namespace ЛАБА1
                 if (string.IsNullOrWhiteSpace(name))
                 {
                     Console.WriteLine("Имя пустое.");
-                    WaitForContinue();
                     return;
                 }
 
@@ -138,7 +111,6 @@ namespace ЛАБА1
                 if (string.IsNullOrWhiteSpace(species))
                 {
                     Console.WriteLine("Нужна расса , допустим негр.");
-                    WaitForContinue();
                     return;
                 }
 
@@ -147,7 +119,6 @@ namespace ЛАБА1
                 if (string.IsNullOrWhiteSpace(genre))
                 {
                     Console.WriteLine("Личность небинарная?.");
-                    WaitForContinue();
                     return;
                 }
 
@@ -155,7 +126,6 @@ namespace ЛАБА1
                 if (!int.TryParse(Console.ReadLine(), out int strange) || strange < 0)
                 {
                     Console.WriteLine("ОШибка.");
-                    WaitForContinue();
                     return;
                 }
 
@@ -164,7 +134,6 @@ namespace ЛАБА1
                 if (string.IsNullOrWhiteSpace(damageType))
                 {
                     Console.WriteLine("Ошибка.");
-                    WaitForContinue();
                     return;
                 }
 
@@ -172,19 +141,16 @@ namespace ЛАБА1
                 if (!double.TryParse(Console.ReadLine(), out double hp) || hp <= 0)
                 {
                     Console.WriteLine("Error.");
-                    WaitForContinue();
                     return;
                 }
+
                 logic.CreateHero(name, genre, species, hp, damageType, strange);
                 Console.WriteLine("Герой добавлен!");
-                SharedData.SaveFile();
-                Program.RefreshFormData();
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при добавлении героя: {ex.Message}");
             }
-            WaitForContinue();
         }
 
         /// <summary>
@@ -197,7 +163,6 @@ namespace ЛАБА1
             if (string.IsNullOrWhiteSpace(name))
             {
                 Console.WriteLine("Имя для поиска пустое.");
-                WaitForContinue();
                 return;
             }
 
@@ -206,16 +171,14 @@ namespace ЛАБА1
             if (heroes.Count == 0)
             {
                 Console.WriteLine($"Героев с именем '{name}' не найдено.");
+                return;
             }
-            else
+
+            Console.WriteLine($"\nГерои с именем '{name}':");
+            foreach (var hero in heroes)
             {
-                Console.WriteLine($"\nГерои с именем '{name}':");
-                foreach (var hero in heroes)
-                {
-                    Console.WriteLine($"{hero.Id}) {hero.Name} - {hero.Species} ({hero.Hp} HP)");
-                }
+                Console.WriteLine($"{hero.Id}) {hero.Name} - {hero.Species} ({hero.Hp} HP)");
             }
-            WaitForContinue();
         }
 
         /// <summary>
@@ -228,19 +191,17 @@ namespace ЛАБА1
             if (heroesBySpecies.Count == 0)
             {
                 Console.WriteLine("Героев не найдено.");
+                return;
             }
-            else
+
+            foreach (var species in heroesBySpecies)
             {
-                foreach (var species in heroesBySpecies)
+                Console.WriteLine($"\n--- {species.Key} ---");
+                foreach (var hero in species.Value)
                 {
-                    Console.WriteLine($"\n--- {species.Key} ---");
-                    foreach (var hero in species.Value)
-                    {
-                        Console.WriteLine($"  {hero.Name} - Сила: {hero.Strange}, HP: {hero.Hp}");
-                    }
+                    Console.WriteLine($"  {hero.Name} - Сила: {hero.Strange}, HP: {hero.Hp}");
                 }
             }
-            WaitForContinue();
         }
 
         /// <summary>
@@ -253,19 +214,17 @@ namespace ЛАБА1
             if (heroesByDamage.Count == 0)
             {
                 Console.WriteLine("Героев не найдено.");
+                return;
             }
-            else
+
+            foreach (var damageType in heroesByDamage)
             {
-                foreach (var damageType in heroesByDamage)
+                Console.WriteLine($"\n--- {damageType.Key} ---");
+                foreach (var hero in damageType.Value)
                 {
-                    Console.WriteLine($"\n--- {damageType.Key} ---");
-                    foreach (var hero in damageType.Value)
-                    {
-                        Console.WriteLine($"  {hero.Name} ({hero.Species}) - HP: {hero.Hp}");
-                    }
+                    Console.WriteLine($"  {hero.Name} ({hero.Species}) - HP: {hero.Hp}");
                 }
             }
-            WaitForContinue();
         }
 
         /// <summary>
@@ -278,16 +237,14 @@ namespace ЛАБА1
             if (wounded.Count == 0)
             {
                 Console.WriteLine("Раненых героев не найдено.");
+                return;
             }
-            else
+
+            Console.WriteLine("\nРаненые герои (HP < 50):");
+            foreach (var hero in wounded)
             {
-                Console.WriteLine("\nРаненые герои (HP < 50):");
-                foreach (var hero in wounded)
-                {
-                    Console.WriteLine($"{hero.Id}) {hero.Name} - {hero.Hp} HP");
-                }
+                Console.WriteLine($"{hero.Id}) {hero.Name} - {hero.Hp} HP");
             }
-            WaitForContinue();
         }
 
         /// <summary>
@@ -300,16 +257,14 @@ namespace ЛАБА1
             if (strongest.Count == 0)
             {
                 Console.WriteLine("Героев не найдено.");
+                return;
             }
-            else
+
+            Console.WriteLine("\nТоп-3 самых сильных героя:");
+            foreach (var hero in strongest)
             {
-                Console.WriteLine("\nТоп-3 самых сильных героя:");
-                foreach (var hero in strongest)
-                {
-                    Console.WriteLine($"{hero.Id}) {hero.Name} - Сила: {hero.Strange}, HP: {hero.Hp}");
-                }
+                Console.WriteLine($"{hero.Id}) {hero.Name} - Сила: {hero.Strange}, HP: {hero.Hp}");
             }
-            WaitForContinue();
         }
 
         /// <summary>
@@ -324,7 +279,6 @@ namespace ЛАБА1
                 if (!int.TryParse(Console.ReadLine(), out int id) || id <= 0)
                 {
                     Console.WriteLine("Некорректный ID героя.");
-                    WaitForContinue();
                     return;
                 }
 
@@ -332,7 +286,6 @@ namespace ЛАБА1
                 if (hero == null)
                 {
                     Console.WriteLine("Герой с таким ID не найден.");
-                    WaitForContinue();
                     return;
                 }
 
@@ -340,15 +293,11 @@ namespace ЛАБА1
                 if (!double.TryParse(Console.ReadLine(), out double damage) || damage <= 0)
                 {
                     Console.WriteLine("Некорректное значение урона.");
-                    WaitForContinue();
                     return;
                 }
+
                 logic.HitHero(id, damage);
-
-                SharedData.SaveFile();
-
                 var updatedHero = logic.GetHero(id);
-                Program.RefreshFormData();
                 if (updatedHero.Hp > 0)
                 {
                     Console.WriteLine($"Урон нанесен! Новое HP: {updatedHero.Hp}");
@@ -357,12 +306,12 @@ namespace ЛАБА1
                 {
                     Console.WriteLine("Герой сдох! Вы нанесли смертельный урон");
                 }
+
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка при нанесении урона: {ex.Message}");
             }
-            WaitForContinue();
         }
 
         /// <summary>
@@ -376,7 +325,6 @@ namespace ЛАБА1
                 if (!int.TryParse(Console.ReadLine(), out int id) || id <= 0)
                 {
                     Console.WriteLine("Некорректный ID героя.");
-                    WaitForContinue();
                     return;
                 }
 
@@ -384,7 +332,6 @@ namespace ЛАБА1
                 if (hero == null)
                 {
                     Console.WriteLine("Герой с таким ID не найден.");
-                    WaitForContinue();
                     return;
                 }
 
@@ -394,9 +341,7 @@ namespace ЛАБА1
                 if (confirmation == "y" || confirmation == "yes" || confirmation == "д" || confirmation == "да")
                 {
                     logic.KillHero(id);
-                    SharedData.SaveFile();
                     Console.WriteLine("Герой удален!");
-                    Program.RefreshFormData();
                 }
                 else
                 {
@@ -407,13 +352,6 @@ namespace ЛАБА1
             {
                 Console.WriteLine($"Ошибка при удалении героя: {ex.Message}");
             }
-            WaitForContinue();
-        }
-
-        private void WaitForContinue()
-        {
-            Console.WriteLine("\nНажмите любую клавишу для продолжения...");
-            Console.ReadKey();
         }
     }
 }
