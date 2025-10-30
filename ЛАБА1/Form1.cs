@@ -59,7 +59,7 @@ namespace ЛАБА1
                     }
                 }
             }
-            catch (Exception ex)
+            catch (Exception)
             {
                 // Игнорируем ошибки при обновлении
             }

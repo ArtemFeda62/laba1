@@ -4,11 +4,11 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
+using ЛАБА1;
 
 namespace ЛАБА1
 {
-    internal class ConsoleInterface
+    public class ConsoleInterface
     {
         private Logic logic;
         private bool _isRunning;
@@ -20,31 +20,6 @@ namespace ЛАБА1
         {
             logic = new Logic();
             _isRunning = false;
-
-            SetupFileWatcher();
-        }
-
-        /// <summary>
-        /// Настраивает отслеживание изменений CSV файла с данными героев
-        /// </summary>
-        private void SetupFileWatcher()
-        {
-            var watcher = new FileSystemWatcher
-            {
-                Path = Directory.GetCurrentDirectory(),Filter = "heroes_data.csv",NotifyFilter = NotifyFilters.LastWrite | NotifyFilters.FileName
-            };
-            watcher.EnableRaisingEvents = true;
-        }
-
-        /// <summary>
-        /// Обрабатывает события изменения CSV файла с данными
-        /// </summary>
-        /// <param name="sender">Источник события</param>
-        /// <param name="e">Данные о изменении файла</param>
-        private void OnDataFileChanged(object sender, FileSystemEventArgs e)
-        {
-            SharedData.ReloadFromFile();
-            Program.RefreshFormData();
         }
 
         /// <summary>
@@ -146,7 +121,7 @@ namespace ЛАБА1
                 var species = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(species))
                 {
-                    Console.WriteLine("Нужна расса , допустим негр.");
+                    Console.WriteLine("Нужна расса, допустим негр.");
                     WaitForContinue();
                     return;
                 }
@@ -163,7 +138,7 @@ namespace ЛАБА1
                 Console.Write("Сила: ");
                 if (!int.TryParse(Console.ReadLine(), out int strange) || strange < 0)
                 {
-                    Console.WriteLine("ОШибка.");
+                    Console.WriteLine("Ошибка.");
                     WaitForContinue();
                     return;
                 }
@@ -184,10 +159,9 @@ namespace ЛАБА1
                     WaitForContinue();
                     return;
                 }
+
                 logic.CreateHero(name, genre, species, hp, damageType, strange);
-                Console.WriteLine("Герой добавлен!");
-                SharedData.SaveFile();
-                Program.RefreshFormData();
+                Console.WriteLine("Герой добавлен в базу данных!");
             }
             catch (Exception ex)
             {
@@ -352,12 +326,10 @@ namespace ЛАБА1
                     WaitForContinue();
                     return;
                 }
+
                 logic.HitHero(id, damage);
-
-                SharedData.SaveFile();
-
                 var updatedHero = logic.GetHero(id);
-                Program.RefreshFormData();
+
                 if (updatedHero.Hp > 0)
                 {
                     Console.WriteLine($"Урон нанесен! Новое HP: {updatedHero.Hp}");
@@ -403,9 +375,7 @@ namespace ЛАБА1
                 if (confirmation == "y" || confirmation == "yes" || confirmation == "д" || confirmation == "да")
                 {
                     logic.KillHero(id);
-                    SharedData.SaveFile();
-                    Console.WriteLine("Герой удален!");
-                    Program.RefreshFormData();
+                    Console.WriteLine("Герой удален из базы данных!");
                 }
                 else
                 {

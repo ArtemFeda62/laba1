@@ -1,5 +1,5 @@
 ﻿using System;
-using System.Threading;
+using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -22,7 +22,11 @@ namespace ЛАБА1
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
+            // Инициализация базы данных
+            InitializeDatabase();
+
             StartBothInterfaces();
+
             while (_isRunning)
             {
                 Thread.Sleep(100);
@@ -34,6 +38,37 @@ namespace ЛАБА1
             }
             Console.WriteLine("Приложение завершено.");
         }
+
+        /// <summary>
+        /// Инициализация базы данных
+        /// </summary>
+        private static void InitializeDatabase()
+        {
+            try
+            {
+                using (var context = new DataAccessLayer.EntityFramework.HeroContext())
+                {
+                    // Создаем базу данных, если она не существует
+                    context.Database.CreateIfNotExists();
+
+                    // Проверяем, есть ли данные в базе
+                    if (!context.Heroes.Any())
+                    {
+                        // Добавляем тестовые данные
+                        var logic = new Logic();
+                        logic.CreateHero("Гоблин Гоша", "Транс", "Гоблин", 20, "Физический урон", 500);
+                        logic.CreateHero("Блум", "ЖЕНЩИНА", "Фея Винкс", 100, "Магический урон", 100);
+                        logic.CreateHero("Орк Генадий", "мужик", "Орк", 50, "Кидается какашками", 250);
+                        Console.WriteLine("Тестовые данные добавлены в базу данных");
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка инициализации базы данных: {ex.Message}");
+            }
+        }
+
         public static void StartBothInterfaces()
         {
             _formThread = new Thread(() =>
@@ -56,6 +91,7 @@ namespace ЛАБА1
             _formThread.SetApartmentState(ApartmentState.STA);
             _formThread.IsBackground = true;
             _formThread.Start();
+
             _consoleThread = new Thread(() =>
             {
                 try
@@ -90,6 +126,7 @@ namespace ЛАБА1
                 }
             }
         }
+
         public static void StopApplication()
         {
             _isRunning = false;
