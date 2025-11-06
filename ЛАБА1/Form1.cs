@@ -21,10 +21,8 @@ namespace ЛАБА1
             InitializeComponent();
             logic = new Logic();
             currentHeroes = new List<Hero>();
-
-            // Настраиваем таймер для автоматического обновления
             refreshTimer = new System.Windows.Forms.Timer();
-            refreshTimer.Interval = 500; // Обновление каждые 500 мс
+            refreshTimer.Interval = 500; 
             refreshTimer.Tick += (s, e) => SafeRefreshHeroesList();
             refreshTimer.Start();
 
@@ -47,21 +45,19 @@ namespace ЛАБА1
             {
                 var previousCount = currentHeroes?.Count ?? 0;
                 currentHeroes = logic.GetListHeros();
-
-                // Обновляем ListBox только если данные изменились
                 if (previousCount != currentHeroes.Count ||
                     listBoxHeroes.Items.Count != currentHeroes.Count)
                 {
                     listBoxHeroes.Items.Clear();
                     foreach (var hero in currentHeroes)
                     {
-                        listBoxHeroes.Items.Add($"{hero.Id}: {hero.Name} - {hero.Species} ({hero.Hp} HP)");
+                        string speciesName = hero.Species?.Name ?? "Неизвестно";
+                        listBoxHeroes.Items.Add($"{hero.Id}: {hero.Name} - {speciesName} ({hero.Hp} HP)");
                     }
                 }
             }
             catch (Exception)
             {
-                // Игнорируем ошибки при обновлении
             }
         }
 
@@ -77,7 +73,8 @@ namespace ЛАБА1
             txtOutput.Text = "Все герои:\n";
             foreach (var hero in currentHeroes)
             {
-                txtOutput.Text += $"{hero.Id}) {hero.Name} - {hero.Species} ({hero.Hp} HP)\n";
+                string speciesName = hero.Species?.Name ?? "Неизвестно";
+                txtOutput.Text += $"{hero.Id}) {hero.Name} - {speciesName} ({hero.Hp} HP)\n";
             }
         }
 
@@ -87,8 +84,8 @@ namespace ЛАБА1
             {
                 if (form.ShowDialog() == DialogResult.OK)
                 {
-                    logic.CreateHero(form.HeroName, form.HeroGenre, form.HeroSpecies,
-                                   form.HeroHp, form.HeroDamageType, form.HeroStrange);
+                    logic.CreateHero(form.HeroName, form.HeroSpeciesId, form.HeroGenre,
+                                   form.HeroStrange, form.HeroDamageType, form.HeroHp);
                     RefreshHeroesList();
                     txtOutput.Text = "Герой успешно добавлен!";
                 }
@@ -104,11 +101,12 @@ namespace ЛАБА1
             }
 
             var foundHeroes = logic.FindHeroesByName(txtSearch.Text);
-            txtOutput.Text = $"Найдено героев: {foundHeroes.Count}\n";
+            txtOutput.Text = $"Найдено героев: {foundHeroes.Count}: \n";
 
             foreach (var hero in foundHeroes)
             {
-                txtOutput.Text += $"{hero.Id}) {hero.Name} - {hero.Species} ({hero.Hp} HP)\n";
+                string speciesName = hero.Species?.Name ?? "Неизвестно";
+                txtOutput.Text += $"{hero.Id}) {hero.Name} - {speciesName} ({hero.Hp} HP)\n";
             }
         }
 
@@ -137,7 +135,8 @@ namespace ЛАБА1
                 txtOutput.Text += $"\n--- {group.Key} ---\n";
                 foreach (var hero in group.Value)
                 {
-                    txtOutput.Text += $"  {hero.Name} ({hero.Species}) - HP: {hero.Hp}\n";
+                    string speciesName = hero.Species?.Name ?? "Неизвестно";
+                    txtOutput.Text += $"  {hero.Name} ({speciesName}) - HP: {hero.Hp}\n";
                 }
             }
         }
@@ -149,7 +148,8 @@ namespace ЛАБА1
 
             foreach (var hero in wounded)
             {
-                txtOutput.Text += $"{hero.Id}) {hero.Name} - {hero.Hp} HP\n";
+                string speciesName = hero.Species?.Name ?? "Неизвестно";
+                txtOutput.Text += $"{hero.Id}) {hero.Name} - {speciesName} - {hero.Hp} HP\n";
             }
         }
 
@@ -160,7 +160,8 @@ namespace ЛАБА1
 
             foreach (var hero in strongest)
             {
-                txtOutput.Text += $"{hero.Id}) {hero.Name} - Сила: {hero.Strange}, HP: {hero.Hp}\n";
+                string speciesName = hero.Species?.Name ?? "Неизвестно";
+                txtOutput.Text += $"{hero.Id}) {hero.Name} - {speciesName} - Сила: {hero.Strange}, HP: {hero.Hp}\n";
             }
         }
 
@@ -227,6 +228,16 @@ namespace ЛАБА1
         {
             RefreshHeroesList();
             txtOutput.Text = "Данные обновлены!";
+        }
+        private void btnShowSpecies_Click(object sender, EventArgs e)
+        {
+            var speciesList = logic.GetAllSpecies();
+            txtOutput.Text = "Список всех рас:\n";
+
+            foreach (var species in speciesList)
+            {
+                txtOutput.Text += $"{species.Id}) {species.Name} - {species.Description}\n";
+            }
         }
     }
 }

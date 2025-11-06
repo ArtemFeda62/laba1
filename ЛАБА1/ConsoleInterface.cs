@@ -13,18 +13,12 @@ namespace ЛАБА1
         private Logic logic;
         private bool _isRunning;
 
-        /// <summary>
-        /// Инициализирует новый экземпляр консольного интерфейса
-        /// </summary>
         public ConsoleInterface()
         {
             logic = new Logic();
             _isRunning = false;
         }
 
-        /// <summary>
-        /// Запускает главный цикл обработки команд консольного интерфейса
-        /// </summary>
         public void Run()
         {
             _isRunning = true;
@@ -42,6 +36,7 @@ namespace ЛАБА1
                 Console.WriteLine("7. Топ-3 самых сильных героя");
                 Console.WriteLine("8. Нанести урон герою");
                 Console.WriteLine("9. Убить героя");
+                Console.WriteLine("10. Показать все расы");
                 Console.WriteLine("0. Выход из консоли");
                 Console.WriteLine("═══════════════════════════════════════");
                 Console.Write("Выберите действие: ");
@@ -59,6 +54,7 @@ namespace ЛАБА1
                     case "7": ShowStrongestHeroes(); break;
                     case "8": HitHero(); break;
                     case "9": KillHero(); break;
+                    case "10": ShowAllSpecies(); break;
                     case "0":
                         _isRunning = false;
                         Console.WriteLine("Консольный интерфейс завершает работу...");
@@ -72,17 +68,11 @@ namespace ЛАБА1
             }
         }
 
-        /// <summary>
-        /// Останавливает работу консольного интерфейса
-        /// </summary>
         public void Stop()
         {
             _isRunning = false;
         }
 
-        /// <summary>
-        /// Отображает список всех героев в системе
-        /// </summary>
         private void ShowAllHeroes()
         {
             Console.WriteLine("\nВсе герои:");
@@ -95,19 +85,36 @@ namespace ЛАБА1
             {
                 foreach (var hero in heroes)
                 {
-                    Console.WriteLine($"{hero.Id}) {hero.Name} - {hero.Species} ({hero.Hp} HP)");
+                    string speciesName = hero.Species?.Name ?? "Неизвестно";
+                    Console.WriteLine($"{hero.Id}) {hero.Name} - {speciesName} ({hero.Hp} HP)");
                 }
             }
             WaitForContinue();
         }
 
-        /// <summary>
-        /// Добавляет нового героя через ввод данных в консоли
-        /// </summary>
+        private void ShowAllSpecies()
+        {
+            Console.WriteLine("\nВсе расы:");
+            var speciesList = logic.GetAllSpecies();
+            if (speciesList.Count == 0)
+            {
+                Console.WriteLine("Рас не найдено.");
+            }
+            else
+            {
+                foreach (var species in speciesList)
+                {
+                    Console.WriteLine($"{species.Id}) {species.Name} - {species.Description}");
+                }
+            }
+            WaitForContinue();
+        }
+
         private void AddNewHero()
         {
             try
             {
+                ShowAllSpecies();
                 Console.Write("Имя: ");
                 var name = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(name))
@@ -116,12 +123,17 @@ namespace ЛАБА1
                     WaitForContinue();
                     return;
                 }
-
-                Console.Write("Раса: ");
-                var species = Console.ReadLine();
-                if (string.IsNullOrWhiteSpace(species))
+                Console.Write("ID расы: ");
+                if (!int.TryParse(Console.ReadLine(), out int speciesId) || speciesId <= 0)
                 {
-                    Console.WriteLine("Нужна расса, допустим негр.");
+                    Console.WriteLine("Некорректный ID расы.");
+                    WaitForContinue();
+                    return;
+                }
+                var species = logic.GetSpeciesById(speciesId);
+                if (species == null)
+                {
+                    Console.WriteLine("Раса с таким ID не найдена.");
                     WaitForContinue();
                     return;
                 }
@@ -130,7 +142,7 @@ namespace ЛАБА1
                 var genre = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(genre))
                 {
-                    Console.WriteLine("Личность небинарная?.");
+                    Console.WriteLine("Гендер не может быть пустым.");
                     WaitForContinue();
                     return;
                 }
@@ -138,7 +150,7 @@ namespace ЛАБА1
                 Console.Write("Сила: ");
                 if (!int.TryParse(Console.ReadLine(), out int strange) || strange < 0)
                 {
-                    Console.WriteLine("Ошибка.");
+                    Console.WriteLine("Некорректное значение силы.");
                     WaitForContinue();
                     return;
                 }
@@ -147,7 +159,7 @@ namespace ЛАБА1
                 var damageType = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(damageType))
                 {
-                    Console.WriteLine("Ошибка.");
+                    Console.WriteLine("Тип урона не может быть пустым.");
                     WaitForContinue();
                     return;
                 }
@@ -155,12 +167,12 @@ namespace ЛАБА1
                 Console.Write("HP: ");
                 if (!double.TryParse(Console.ReadLine(), out double hp) || hp <= 0)
                 {
-                    Console.WriteLine("Error.");
+                    Console.WriteLine("Некорректное значение HP.");
                     WaitForContinue();
                     return;
                 }
 
-                logic.CreateHero(name, genre, species, hp, damageType, strange);
+                logic.CreateHero(name, speciesId, genre, strange, damageType, hp);
                 Console.WriteLine("Герой добавлен в базу данных!");
             }
             catch (Exception ex)
@@ -170,9 +182,6 @@ namespace ЛАБА1
             WaitForContinue();
         }
 
-        /// <summary>
-        /// Выполняет поиск героев по имени (регистронезависимый)
-        /// </summary>
         private void FindByName()
         {
             Console.Write("Введите имя: ");
@@ -195,15 +204,13 @@ namespace ЛАБА1
                 Console.WriteLine($"\nГерои с именем '{name}':");
                 foreach (var hero in heroes)
                 {
-                    Console.WriteLine($"{hero.Id}) {hero.Name} - {hero.Species} ({hero.Hp} HP)");
+                    string speciesName = hero.Species?.Name ?? "Неизвестно";
+                    Console.WriteLine($"{hero.Id}) {hero.Name} - {speciesName} ({hero.Hp} HP)");
                 }
             }
             WaitForContinue();
         }
 
-        /// <summary>
-        /// Отображает героев с группировкой по расовой принадлежности
-        /// </summary>
         private void ShowBySpecies()
         {
             var heroesBySpecies = logic.GroupHeroesBySpecies();
@@ -226,9 +233,6 @@ namespace ЛАБА1
             WaitForContinue();
         }
 
-        /// <summary>
-        /// Отображает героев с группировкой по типу наносимого урона
-        /// </summary>
         private void ShowByDamageType()
         {
             var heroesByDamage = logic.GroupHeroesByDamageType();
@@ -244,16 +248,14 @@ namespace ЛАБА1
                     Console.WriteLine($"\n--- {damageType.Key} ---");
                     foreach (var hero in damageType.Value)
                     {
-                        Console.WriteLine($"  {hero.Name} ({hero.Species}) - HP: {hero.Hp}");
+                        string speciesName = hero.Species?.Name ?? "Неизвестно";
+                        Console.WriteLine($"  {hero.Name} ({speciesName}) - HP: {hero.Hp}");
                     }
                 }
             }
             WaitForContinue();
         }
 
-        /// <summary>
-        /// Отображает список героев с низким уровнем здоровья (менее 50 HP)
-        /// </summary>
         private void ShowWoundedHeroes()
         {
             var wounded = logic.GetHeroesWithLowHp(50);
@@ -267,15 +269,13 @@ namespace ЛАБА1
                 Console.WriteLine("\nРаненые герои (HP < 50):");
                 foreach (var hero in wounded)
                 {
-                    Console.WriteLine($"{hero.Id}) {hero.Name} - {hero.Hp} HP");
+                    string speciesName = hero.Species?.Name ?? "Неизвестно";
+                    Console.WriteLine($"{hero.Id}) {hero.Name} - {speciesName} - {hero.Hp} HP");
                 }
             }
             WaitForContinue();
         }
 
-        /// <summary>
-        /// Отображает топ-3 героев с наибольшим показателем силы
-        /// </summary>
         private void ShowStrongestHeroes()
         {
             var strongest = logic.GetStrongestHeroes(3);
@@ -289,15 +289,13 @@ namespace ЛАБА1
                 Console.WriteLine("\nТоп-3 самых сильных героя:");
                 foreach (var hero in strongest)
                 {
-                    Console.WriteLine($"{hero.Id}) {hero.Name} - Сила: {hero.Strange}, HP: {hero.Hp}");
+                    string speciesName = hero.Species?.Name ?? "Неизвестно";
+                    Console.WriteLine($"{hero.Id}) {hero.Name} - {speciesName} - Сила: {hero.Strange}, HP: {hero.Hp}");
                 }
             }
             WaitForContinue();
         }
 
-        /// <summary>
-        /// Наносит урон выбранному герою и обновляет его здоровье
-        /// </summary>
         private void HitHero()
         {
             ShowAllHeroes();
@@ -346,9 +344,6 @@ namespace ЛАБА1
             WaitForContinue();
         }
 
-        /// <summary>
-        /// Удаляет героя из системы по указанному идентификатору
-        /// </summary>
         private void KillHero()
         {
             try
@@ -389,9 +384,6 @@ namespace ЛАБА1
             WaitForContinue();
         }
 
-        /// <summary>
-        /// Ожидает нажатия любой клавиши для продолжения работы
-        /// </summary>
         private void WaitForContinue()
         {
             Console.WriteLine("\nНажмите любую клавишу для продолжения...");

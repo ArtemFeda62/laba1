@@ -4,25 +4,67 @@ using System.Linq;
 using DataAccessLayer;
 using DataAccessLayer.EntityFramework;
 using ЛАБА1;
+using DataAccessLayer.Dapper;
 
 namespace ЛАБА1
 {
     public class Logic
     {
         private IRepository<Hero> _repository;
+        private HeroContext _context;
+
         public Logic()
         {
             _repository = new EntityRepository<Hero>();
-        }
-        public void CreateHero(string name, string genre, string species, double hp, string typeofdamage, int strange)
+            _context = new HeroContext();
+        }  
+
+        public void CreateHero(string name, int speciesId, string genre, int strange, string typeofdamage, double hp)
         {
-            var hero = new Hero(name, species, genre, strange, typeofdamage, hp);
+            var hero = new Hero(name, speciesId, genre, strange, typeofdamage, hp);
             _repository.Add(hero);
+        }
+
+        public List<Species> GetAllSpecies()
+        {
+            return _context.Species.OrderBy(s => s.Name).ToList();
+        }
+
+        public void AddSpecies(string name, string description)
+        {
+            var species = new Species { Name = name, Description = description };
+            _context.Species.Add(species);
+            _context.SaveChanges();
+        }
+
+        public Species GetSpeciesById(int id)
+        {
+            return _context.Species.FirstOrDefault(s => s.Id == id);
+        }
+
+        public Species GetSpeciesByName(string name)
+        {
+            return _context.Species.FirstOrDefault(s => s.Name == name);
+        }
+
+        public List<string> GetAvailableSpeciesNames()
+        {
+            return _context.Species.Select(s => s.Name).ToList();
+        }
+
+        public Dictionary<string, List<Hero>> GroupHeroesBySpecies()
+        {
+            var heroes = _repository.ReadAll().ToList();
+            return heroes
+                .Where(h => h.Species != null)
+                .GroupBy(h => h.Species.Name)
+                .ToDictionary(g => g.Key, g => g.ToList());
         }
         public Hero GetHero(int id) => _repository.ReadById(id);
         public List<Hero> GetListHeros() => _repository.ReadAll().ToList();
         public void UpdateHero(Hero hero) => _repository.Update(hero);
         public void KillHero(int id) => _repository.Delete(id);
+
         public void HitHero(int id, double damage)
         {
             var hero = _repository.ReadById(id);
@@ -32,12 +74,6 @@ namespace ЛАБА1
                 _repository.Update(hero);
             }
         }
-        public Dictionary<string, List<Hero>> GroupHeroesBySpecies()
-        {
-            return _repository.ReadAll()
-                .GroupBy(h => h.Species)
-                .ToDictionary(g => g.Key, g => g.ToList());
-        }
 
         public Dictionary<string, List<Hero>> GroupHeroesByDamageType()
         {
@@ -45,6 +81,7 @@ namespace ЛАБА1
                 .GroupBy(h => h.TypeOfDamage)
                 .ToDictionary(g => g.Key, g => g.ToList());
         }
+
         public List<Hero> FindHeroesByName(string name)
         {
             return _repository.ReadAll()

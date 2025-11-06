@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Data.Entity;
 using System.Linq;
 using System.Threading;
 using System.Windows.Forms;
+using ЛАБА1;
 
 namespace ЛАБА1
 {
@@ -21,10 +23,7 @@ namespace ЛАБА1
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-
-            // Инициализация базы данных
             InitializeDatabase();
-
             StartBothInterfaces();
 
             while (_isRunning)
@@ -46,29 +45,119 @@ namespace ЛАБА1
         {
             try
             {
+                Database.SetInitializer(new DropCreateDatabaseIfModelChanges<DataAccessLayer.EntityFramework.HeroContext>());
                 using (var context = new DataAccessLayer.EntityFramework.HeroContext())
                 {
-                    // Создаем базу данных, если она не существует
-                    context.Database.CreateIfNotExists();
-
-                    // Проверяем, есть ли данные в базе
-                    if (!context.Heroes.Any())
-                    {
-                        // Добавляем тестовые данные
-                        var logic = new Logic();
-                        logic.CreateHero("Гоблин Гоша", "Транс", "Гоблин", 20, "Физический урон", 500);
-                        logic.CreateHero("Блум", "ЖЕНЩИНА", "Фея Винкс", 100, "Магический урон", 100);
-                        logic.CreateHero("Орк Генадий", "мужик", "Орк", 50, "Кидается какашками", 250);
-                        Console.WriteLine("Тестовые данные добавлены в базу данных");
-                    }
+                    context.Database.Initialize(force: true);
+                    Console.WriteLine("База данных инициализирована");
+                    InitializeSpecies(context);
+                    InitializeHeroes(context);
                 }
             }
             catch (Exception ex)
             {
                 Console.WriteLine($"Ошибка инициализации базы данных: {ex.Message}");
+                Console.WriteLine($"Детали: {ex.InnerException?.Message}");
+                RecreateDatabase();
             }
         }
 
+        /// <summary>
+        /// Пересоздание базы данных
+        /// </summary>
+        private static void RecreateDatabase()
+        {
+            try
+            {
+                Console.WriteLine("Попытка пересоздания базы данных...");
+                using (var context = new DataAccessLayer.EntityFramework.HeroContext())
+                {
+                    if (context.Database.Exists())
+                    {
+                        context.Database.Delete();
+                        Console.WriteLine("Старая база данных удалена");
+                    }
+
+                    context.Database.Create();
+                    Console.WriteLine("Новая база данных создана");
+
+                    InitializeSpecies(context);
+                    InitializeHeroes(context);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при пересоздании базы: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// Инициализация таблицы Species
+        /// </summary>
+        private static void InitializeSpecies(DataAccessLayer.EntityFramework.HeroContext context)
+        {
+            if (!context.Species.Any())
+            {
+                var species = new[]
+                {
+                    new Species { Name = "Человек", Description = "Универсальная раса с сбалансированными характеристиками" },
+                    new Species { Name = "Эльф", Description = "Изящная раса с повышенной ловкостью и интеллектом" },
+                    new Species { Name = "Гном", Description = "Выносливая раса с высокой силой и стойкостью" },
+                    new Species { Name = "Орк", Description = "Сильная и агрессивная раса" },
+                    new Species { Name = "Дварф", Description = "Мастерские навыки в ремеслах и бою" },
+                    new Species { Name = "Гоблин", Description = "Малая, но хитрая раса" }
+                };
+
+                context.Species.AddRange(species);
+                context.SaveChanges();
+                Console.WriteLine($"Таблица Species инициализирована, добавлено {species.Length} рас");
+            }
+            else
+            {
+                Console.WriteLine($"Таблица Species уже содержит {context.Species.Count()} рас");
+            }
+        }
+
+        /// <summary>
+        /// Инициализация тестовых героев
+        /// </summary>
+        private static void InitializeHeroes(DataAccessLayer.EntityFramework.HeroContext context)
+        {
+            if (!context.Heroes.Any())
+            {
+                var species = context.Species.ToList();
+                Console.WriteLine($"Найдено рас в базе: {species.Count}");
+
+                // Находим ID для каждой расы
+                var goblin = species.FirstOrDefault(s => s.Name == "Гоблин");
+                var elf = species.FirstOrDefault(s => s.Name == "Эльф");
+                var orc = species.FirstOrDefault(s => s.Name == "Орк");
+
+                if (goblin == null || elf == null || orc == null)
+                {
+                    Console.WriteLine("Ошибка: не все расы найдены в базе");
+                    return;
+                }
+
+                // Добавляем тестовых героев напрямую через контекст
+                var heroes = new[]
+                {
+                    new Hero { Name = "Гоблин Гоша", SpeciesId = goblin.Id, Genre = "Транс", Strange = 20, TypeOfDamage = "Физический урон", Hp = 500 },
+                    new Hero { Name = "Блум", SpeciesId = elf.Id, Genre = "Женский", Strange = 100, TypeOfDamage = "Магический урон", Hp = 100 },
+                    new Hero { Name = "Орк Генадий", SpeciesId = orc.Id, Genre = "Мужской", Strange = 50, TypeOfDamage = "Кидается какашками", Hp = 250 }
+                };
+
+                context.Heroes.AddRange(heroes);
+                context.SaveChanges();
+                Console.WriteLine($"Добавлено {heroes.Length} тестовых героев");
+            }
+            else
+            {
+                Console.WriteLine($"База данных уже содержит {context.Heroes.Count()} героев");
+            }
+        }
+
+        // Остальные методы без изменений...
         public static void StartBothInterfaces()
         {
             _formThread = new Thread(() =>
@@ -130,6 +219,28 @@ namespace ЛАБА1
         public static void StopApplication()
         {
             _isRunning = false;
+
+            try
+            {
+                _formThread?.Abort();
+                _consoleThread?.Abort();
+            }
+            catch
+            {
+            }
+        }
+
+        public static Logic GetLogic()
+        {
+            return new Logic();
+        }
+
+        public static System.Collections.Generic.List<Species> GetSpecies()
+        {
+            using (var context = new DataAccessLayer.EntityFramework.HeroContext())
+            {
+                return context.Species.OrderBy(s => s.Name).ToList();
+            }
         }
     }
 }

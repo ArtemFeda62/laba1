@@ -6,17 +6,18 @@ namespace ЛАБА1
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public string Species { get; set; }
         public string Genre { get; set; }
         public int Strange { get; set; }
         public double Hp { get; set; }
         public string TypeOfDamage { get; set; }
+        public int SpeciesId { get; set; }
+        public virtual Species Species { get; set; }
         // нужен для EF
         public Hero() { }
-        public Hero(string name, string species, string genre, int strange, string typeOfDamage, double hp)
+        public Hero(string name, int speciesId, string genre, int strange, string typeOfDamage, double hp)
         {
             Name = name;
-            Species = species;
+            SpeciesId = speciesId;
             Genre = genre;
             Strange = strange;
             TypeOfDamage = typeOfDamage;

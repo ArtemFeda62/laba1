@@ -10,53 +10,86 @@ namespace DataAccessLayer.Dapper
 {
     public class DapperRepository<T> : IRepository<T> where T : Hero, IDomainObject, new()
     {
-        //строчка для подключение к базе данных
-        private readonly string _connectionString = "Data Source=(localdb)\\MSSQLLocalDB;Initial Catalog=HeroDatabase;Integrated Security=True";
-        //метод чтобы подключится к этой базе
+        private readonly string _connectionString =
+            @"Data Source=(localdb)\MSSQLLocalDB;
+              AttachDbFilename=C:\Users\79082\source\repos\laba1\ЛАБА1\HeroDatabase.mdf;
+              Integrated Security=True";
+
         private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
-        public void Add(T entity)
+        public IEnumerable<Species> GetAllSpecies()
         {
-            //sql запрос данных с базы
-            var sql = @"INSERT INTO Heroes (Name, Species, Genre, Strange, Hp, TypeOfDamage) 
-                       VALUES (@Name, @Species, @Genre, @Strange, @Hp, @TypeOfDamage)";
-            using (var connection = CreateConnection())//подключение к базе, после чего подключение будет закрыто
-            {
-                connection.Execute(sql, entity);//благодаря этому методу мы маппим свойства объекта на парраметры entity
-            }
-        }
-        public void Delete(int id)
-        {
-            var sql = "DELETE FROM Heroes WHERE Id = @Id";//удаление по айди
+            var sql = "SELECT * FROM Species";
             using (var connection = CreateConnection())
             {
-                connection.Execute(sql, new { Id = id });//маппим @id на свойство id 
+                return connection.Query<Species>(sql);
+            }
+        }
+        public void Add(T entity)
+        {
+            var sql = @"INSERT INTO Heroes (Name, SpeciesId, Genre, Strange, Hp, TypeOfDamage) 
+                       VALUES (@Name, @SpeciesId, @Genre, @Strange, @Hp, @TypeOfDamage)";
+            using (var connection = CreateConnection())
+            {
+                connection.Execute(sql, entity);
             }
         }
         public IEnumerable<T> ReadAll()
         {
-            var sql = "SELECT * FROM Heroes";//возвращает все столбцы
+            var sql = @"
+                SELECT h.*, s.Id as SpeciesId, s.Name as SpeciesName, s.Description
+                FROM Heroes h 
+                INNER JOIN Species s ON h.SpeciesId = s.Id";
+
             using (var connection = CreateConnection())
             {
-                return connection.Query<T>(sql);//этот метод для Select зарпосов,маппит все строчки на объекты Hero
+                return connection.Query<T, Species, T>(sql,
+                    (hero, species) =>
+                    {
+                        hero.Species = species;
+                        hero.SpeciesId = species.Id;
+                        return hero;
+                    },
+                    splitOn: "SpeciesId");
+            }
+        }
+
+        public void Delete(int id)
+        {
+            var sql = "DELETE FROM Heroes WHERE Id = @Id";
+            using (var connection = CreateConnection())
+            {
+                connection.Execute(sql, new { Id = id });
             }
         }
         public T ReadById(int id)
         {
-            var sql = "SELECT * FROM Heroes WHERE Id = @Id";
+            var sql = @"
+                SELECT h.*, s.Id as SpeciesId, s.Name as SpeciesName, s.Description
+                FROM Heroes h 
+                INNER JOIN Species s ON h.SpeciesId = s.Id 
+                WHERE h.Id = @Id";
+
             using (var connection = CreateConnection())
             {
-                return connection.QueryFirstOrDefault<T>(sql, new { Id = id });//вовзращает первую строку по айдишке
+                return connection.Query<T, Species, T>(sql,
+                    (hero, species) =>
+                    {
+                        hero.Species = species;
+                        hero.SpeciesId = species.Id;
+                        return hero;
+                    },
+                    new { Id = id },
+                    splitOn: "SpeciesId").FirstOrDefault();
             }
         }
         public void Update(T entity)
         {
-            //устанавливает новые значения свойств при каком-то условии
-            var sql = @"UPDATE Heroes SET Name = @Name, Species = @Species, Genre = @Genre, 
+            var sql = @"UPDATE Heroes SET Name = @Name, SpeciesId = @SpeciesId, Genre = @Genre, 
                        Strange = @Strange, Hp = @Hp, TypeOfDamage = @TypeOfDamage 
                        WHERE Id = @Id";
             using (var connection = CreateConnection())
             {
-                connection.Execute(sql, entity);//меняет все свойства на новые
+                connection.Execute(sql, entity);
             }
         }
     }
