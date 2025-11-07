@@ -6,6 +6,7 @@ using DataAccessLayer.EntityFramework;
 using ЛАБА1;
 using DataAccessLayer.Dapper;
 
+
 namespace ЛАБА1
 {
     public class Logic
@@ -17,7 +18,29 @@ namespace ЛАБА1
         {
             _repository = new EntityRepository<Hero>();
             _context = new HeroContext();
-        }  
+        }
+
+        /// <summary>
+        /// Получение героев с пагинацией
+        /// </summary>
+        /// <param name="pageNumber">Номер страницы</param>
+        /// <param name="pageSize">Размер страницы</param>
+        /// <returns>Список героев для указанной страницы</returns>
+        public List<Hero> GetHeroesWithPagination(int pageNumber, int pageSize)
+        {
+            return _repository.ReadAll()
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+        }
+
+        /// <summary>
+        /// Получение общего количества героев
+        /// </summary>
+        public int GetTotalHeroesCount()
+        {
+            return _repository.ReadAll().Count();
+        }
 
         public void CreateHero(string name, int speciesId, string genre, int strange, string typeofdamage, double hp)
         {
@@ -60,6 +83,7 @@ namespace ЛАБА1
                 .GroupBy(h => h.Species.Name)
                 .ToDictionary(g => g.Key, g => g.ToList());
         }
+
         public Hero GetHero(int id) => _repository.ReadById(id);
         public List<Hero> GetListHeros() => _repository.ReadAll().ToList();
         public void UpdateHero(Hero hero) => _repository.Update(hero);
@@ -88,12 +112,14 @@ namespace ЛАБА1
                 .Where(h => h.Name.ToLower().Contains(name.ToLower()))
                 .ToList();
         }
+
         public List<Hero> GetHeroesWithLowHp(double maxHp)
         {
             return _repository.ReadAll()
                 .Where(h => h.Hp <= maxHp)
                 .ToList();
         }
+
         public List<Hero> GetStrongestHeroes(int count)
         {
             return _repository.ReadAll()

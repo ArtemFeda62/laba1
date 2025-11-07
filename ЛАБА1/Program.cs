@@ -15,9 +15,6 @@ namespace ЛАБА1
         private static Thread _consoleThread;
         private static bool _isRunning = true;
 
-        /// <summary>
-        /// Главная точка входа для приложения.
-        /// </summary>
         [STAThread]
         static void Main()
         {
@@ -38,9 +35,6 @@ namespace ЛАБА1
             Console.WriteLine("Приложение завершено.");
         }
 
-        /// <summary>
-        /// Инициализация базы данных
-        /// </summary>
         private static void InitializeDatabase()
         {
             try
@@ -62,9 +56,6 @@ namespace ЛАБА1
             }
         }
 
-        /// <summary>
-        /// Пересоздание базы данных
-        /// </summary>
         private static void RecreateDatabase()
         {
             try
@@ -91,9 +82,6 @@ namespace ЛАБА1
             }
         }
 
-        /// <summary>
-        /// Инициализация таблицы Species
-        /// </summary>
         private static void InitializeSpecies(DataAccessLayer.EntityFramework.HeroContext context)
         {
             if (!context.Species.Any())
@@ -118,9 +106,6 @@ namespace ЛАБА1
             }
         }
 
-        /// <summary>
-        /// Инициализация тестовых героев
-        /// </summary>
         private static void InitializeHeroes(DataAccessLayer.EntityFramework.HeroContext context)
         {
             if (!context.Heroes.Any())
@@ -128,7 +113,6 @@ namespace ЛАБА1
                 var species = context.Species.ToList();
                 Console.WriteLine($"Найдено рас в базе: {species.Count}");
 
-                // Находим ID для каждой расы
                 var goblin = species.FirstOrDefault(s => s.Name == "Гоблин");
                 var elf = species.FirstOrDefault(s => s.Name == "Эльф");
                 var orc = species.FirstOrDefault(s => s.Name == "Орк");
@@ -139,7 +123,6 @@ namespace ЛАБА1
                     return;
                 }
 
-                // Добавляем тестовых героев напрямую через контекст
                 var heroes = new[]
                 {
                     new Hero { Name = "Гоблин Гоша", SpeciesId = goblin.Id, Genre = "Транс", Strange = 20, TypeOfDamage = "Физический урон", Hp = 500 },
@@ -157,7 +140,6 @@ namespace ЛАБА1
             }
         }
 
-        // Остальные методы без изменений...
         public static void StartBothInterfaces()
         {
             _formThread = new Thread(() =>
