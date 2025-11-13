@@ -1,4 +1,6 @@
-﻿using System;
+﻿using BusinessLogicLayer;
+using Ninject;
+using System;
 using System.Data.Entity;
 using System.Linq;
 using System.Threading;
@@ -14,6 +16,11 @@ namespace ЛАБА1
         private static Thread _formThread;
         private static Thread _consoleThread;
         private static bool _isRunning = true;
+        public static Logic GetLogic()
+        {
+            IKernel ninjectKernel = new StandardKernel(new SimpleConfigModule());
+            return ninjectKernel.Get<Logic>();
+        }
 
         [STAThread]
         static void Main()
@@ -211,12 +218,6 @@ namespace ЛАБА1
             {
             }
         }
-
-        public static Logic GetLogic()
-        {
-            return new Logic();
-        }
-
         public static System.Collections.Generic.List<Species> GetSpecies()
         {
             using (var context = new DataAccessLayer.EntityFramework.HeroContext())

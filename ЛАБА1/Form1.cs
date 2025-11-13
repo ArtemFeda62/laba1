@@ -1,4 +1,6 @@
-﻿using System;
+﻿using BusinessLogicLayer;
+using Ninject;
+using System;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Drawing;
@@ -25,13 +27,12 @@ namespace ЛАБА1
         private Button btnLast;
         private ComboBox cmbPageSize;
 
-        /// <summary>
-        /// Конструктор главной формы
-        /// </summary>
         public Form1()
         {
             InitializeComponent();
-            logic = new Logic();
+            IKernel ninjectKernel = new StandardKernel(new SimpleConfigModule());
+            logic = ninjectKernel.Get<Logic>();
+
             InitializePaginationControls();
             RefreshHeroesList();
         }
@@ -199,7 +200,6 @@ namespace ЛАБА1
                 Width = 150
             });
 
-            // Добавляем статус лейбл если его нет
             if (statusStrip1.Items.Count == 0)
             {
                 statusStrip1.Items.Add(new ToolStripStatusLabel());
@@ -260,9 +260,6 @@ namespace ЛАБА1
         {
             RefreshHeroesList();
         }
-
-        // Все остальные функции остаются без изменений
-
         private void показатьВсегоГероевToolStripMenuItem_Click(object sender, EventArgs e)
         {
             ShowAllHeroes();

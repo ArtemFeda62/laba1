@@ -4,8 +4,6 @@ using System.Linq;
 using DataAccessLayer;
 using DataAccessLayer.EntityFramework;
 using ЛАБА1;
-using DataAccessLayer.Dapper;
-
 
 namespace ЛАБА1
 {
@@ -14,18 +12,16 @@ namespace ЛАБА1
         private IRepository<Hero> _repository;
         private HeroContext _context;
 
+        public Logic(IRepository<Hero> repository)
+        {
+            _repository = repository;
+            _context = new HeroContext();
+        }
         public Logic()
         {
             _repository = new EntityRepository<Hero>();
             _context = new HeroContext();
         }
-
-        /// <summary>
-        /// Получение героев с пагинацией
-        /// </summary>
-        /// <param name="pageNumber">Номер страницы</param>
-        /// <param name="pageSize">Размер страницы</param>
-        /// <returns>Список героев для указанной страницы</returns>
         public List<Hero> GetHeroesWithPagination(int pageNumber, int pageSize)
         {
             return _repository.ReadAll()
@@ -34,9 +30,6 @@ namespace ЛАБА1
                 .ToList();
         }
 
-        /// <summary>
-        /// Получение общего количества героев
-        /// </summary>
         public int GetTotalHeroesCount()
         {
             return _repository.ReadAll().Count();

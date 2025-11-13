@@ -1,4 +1,6 @@
-﻿using System;
+﻿using BusinessLogicLayer;
+using Ninject;
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -15,10 +17,10 @@ namespace ЛАБА1
 
         public ConsoleInterface()
         {
-            logic = new Logic();
+            IKernel ninjectKernel = new StandardKernel(new SimpleConfigModule());
+            logic = ninjectKernel.Get<Logic>();
             _isRunning = false;
         }
-
         public void Run()
         {
             _isRunning = true;
