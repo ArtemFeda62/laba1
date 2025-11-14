@@ -13,12 +13,10 @@ namespace ЛАБА1
     public partial class Form1 : Form
     {
         private Logic logic;
-        private BindingList<Hero> heroes;
         private int currentPage = 1;
         private int pageSize = 10;
         private int totalHeroes = 0;
         private int totalPages = 0;
-
         private Label lblCurrentPage;
         private Label lblTotalPages;
         private Button btnFirst;
@@ -84,6 +82,9 @@ namespace ЛАБА1
         /// <summary>
         /// Обновление списка героев с учетом пагинации
         /// </summary>
+        /// <summary>
+        /// Обновление списка героев с учетом пагинации
+        /// </summary>
         public void RefreshHeroesList()
         {
             try
@@ -102,8 +103,18 @@ namespace ЛАБА1
                     .Take(pageSize)
                     .ToList();
 
-                heroes = new BindingList<Hero>(pagedHeroes);
-                dataGridView1.DataSource = heroes;
+                var displayData = pagedHeroes.Select(h => new
+                {
+                    h.Id,
+                    h.Name,
+                    SpeciesName = h.Species.Name,
+                    h.Hp,
+                    h.Strange,
+                    h.Genre,
+                    h.TypeOfDamage
+                }).ToList();
+
+                dataGridView1.DataSource = displayData;
 
                 UpdatePaginationInfo();
                 UpdateStatusBar();
@@ -148,66 +159,53 @@ namespace ЛАБА1
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            dataGridView1.AutoGenerateColumns = false;
             dataGridView1.Columns.Clear();
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            dataGridView1.AutoGenerateColumns = false;
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
                 DataPropertyName = "Id",
                 HeaderText = "ID",
-                Width = 50
+                Width = 40
             });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
                 DataPropertyName = "Name",
-                HeaderText = "Имя",
-                Width = 150
+                HeaderText = "Имя героя",
+                Width = 120
             });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
-                DataPropertyName = "Species.Name",
+                DataPropertyName = "SpeciesName", 
                 HeaderText = "Раса",
                 Width = 100
             });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                DataPropertyName = "Genre",
-                HeaderText = "Гендер",
-                Width = 80
-            });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                DataPropertyName = "Strange",
-                HeaderText = "Сила",
-                Width = 60
-            });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
                 DataPropertyName = "Hp",
                 HeaderText = "HP",
-                Width = 80
+                Width = 60
             });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
+            {
+                DataPropertyName = "Strange",
+                HeaderText = "Сила",
+                Width = 50
+            });
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
+            {
+                DataPropertyName = "Genre",
+                HeaderText = "Гендер",
+                Width = 70
+            });
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
                 DataPropertyName = "TypeOfDamage",
                 HeaderText = "Тип урона",
-                Width = 150
+                Width = 120
             });
-
-            if (statusStrip1.Items.Count == 0)
-            {
-                statusStrip1.Items.Add(new ToolStripStatusLabel());
-            }
 
             RefreshHeroesList();
         }
-
         private void добавитьГерояToolStripMenuItem_Click(object sender, EventArgs e)
         {
             using (var form = new AddHeroForm())

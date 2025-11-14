@@ -18,14 +18,12 @@ namespace DataAccessLayer.EntityFramework
             modelBuilder.Entity<Hero>().Property(h => h.Name).IsRequired().HasMaxLength(100);
             modelBuilder.Entity<Hero>().Property(h => h.Genre).IsRequired().HasMaxLength(20);
             modelBuilder.Entity<Hero>().Property(h => h.TypeOfDamage).IsRequired().HasMaxLength(50);
-
             // Настройка таблицы Species
             modelBuilder.Entity<Species>().ToTable("Species");
             modelBuilder.Entity<Species>().HasKey(s => s.Id);
             modelBuilder.Entity<Species>().Property(s => s.Name).IsRequired().HasMaxLength(50);
             modelBuilder.Entity<Species>().Property(s => s.Description).HasMaxLength(200);
             modelBuilder.Entity<Hero>().HasRequired(h => h.Species).WithMany(s => s.Heroes).HasForeignKey(h => h.SpeciesId);
-
             base.OnModelCreating(modelBuilder);
         }
     }

@@ -87,8 +87,8 @@ namespace ЛАБА1
             {
                 foreach (var hero in heroes)
                 {
-                    string speciesName = hero.Species?.Name ?? "Неизвестно";
-                    Console.WriteLine($"{hero.Id}) {hero.Name} - {speciesName} ({hero.Hp} HP)");
+                    string speciesName = hero.Species.Name;                                          
+                    Console.WriteLine($"{hero.Id} {hero.Name} {speciesName} {hero.Hp} {hero.Strange}");
                 }
             }
             WaitForContinue();
