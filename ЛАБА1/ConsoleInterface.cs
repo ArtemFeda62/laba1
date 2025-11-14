@@ -73,6 +73,7 @@ namespace ЛАБА1
             _isRunning = false;
         }
 
+
         private void ShowAllHeroes()
         {
             Console.WriteLine("\nВсе герои:");
@@ -83,11 +84,17 @@ namespace ЛАБА1
             }
             else
             {
+                Console.WriteLine("═══════════════════════════════════════════════════════════════");
+                Console.WriteLine("ID  Имя                 ID Расы  Раса              HP     Сила");
+                Console.WriteLine("═══════════════════════════════════════════════════════════════");
+
                 foreach (var hero in heroes)
                 {
                     string speciesName = hero.Species?.Name ?? "Неизвестно";
-                    Console.WriteLine($"{hero.Id}) {hero.Name} - {speciesName} ({hero.Hp} HP)");
+                    Console.WriteLine($"{hero.Id,-3} {hero.Name,-18} {hero.SpeciesId,-8} {speciesName,-17} {hero.Hp,-6} {hero.Strange}");
+
                 }
+              
             }
             WaitForContinue();
         }

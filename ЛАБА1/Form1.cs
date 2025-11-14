@@ -147,67 +147,52 @@ namespace ЛАБА1
 
         private void Form1_Load(object sender, EventArgs e)
         {
-            dataGridView1.AutoGenerateColumns = false;
             dataGridView1.Columns.Clear();
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            dataGridView1.AutoGenerateColumns = false;
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
                 DataPropertyName = "Id",
                 HeaderText = "ID",
-                Width = 50
+                Width = 40
             });
 
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
                 DataPropertyName = "Name",
-                HeaderText = "Имя",
-                Width = 150
+                HeaderText = "Имя героя",
+                Width = 120
             });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
-                DataPropertyName = "Species.Name",
-                HeaderText = "Раса",
-                Width = 100
+                DataPropertyName = "SpeciesId",
+                HeaderText = "ID Расы",
+                Width = 70
             });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                DataPropertyName = "Genre",
-                HeaderText = "Гендер",
-                Width = 80
-            });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
-            {
-                DataPropertyName = "Strange",
-                HeaderText = "Сила",
-                Width = 60
-            });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
                 DataPropertyName = "Hp",
                 HeaderText = "HP",
-                Width = 80
+                Width = 60
             });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
+            {
+                DataPropertyName = "Strange",
+                HeaderText = "Сила",
+                Width = 50
+            });
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
+            {
+                DataPropertyName = "Genre",
+                HeaderText = "Гендер",
+                Width = 70
+            });
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
                 DataPropertyName = "TypeOfDamage",
                 HeaderText = "Тип урона",
-                Width = 150
+                Width = 120
             });
-
-            // Добавляем статус лейбл если его нет
-            if (statusStrip1.Items.Count == 0)
-            {
-                statusStrip1.Items.Add(new ToolStripStatusLabel());
-            }
-
-            RefreshHeroesList();
         }
-
         private void добавитьГерояToolStripMenuItem_Click(object sender, EventArgs e)
         {
             using (var form = new AddHeroForm())

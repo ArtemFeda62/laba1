@@ -48,8 +48,7 @@ namespace DataAccessLayer.Dapper
                         hero.Species = species;
                         hero.SpeciesId = species.Id;
                         return hero;
-                    },
-                    splitOn: "SpeciesId");
+                    });
             }
         }
 
