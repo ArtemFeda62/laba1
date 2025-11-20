@@ -8,7 +8,7 @@ using ЛАБА1;
 
 namespace DataAccessLayer.Dapper
 {
-    public class DapperRepository<T> : IRepository<T> where T : Hero, IDomainObject, new()
+    public class DapperHeroRepository : IHeroRepository
     {
         private readonly string _connectionString =
             @"Data Source=(localdb)\MSSQLLocalDB;
@@ -17,16 +17,7 @@ namespace DataAccessLayer.Dapper
 
         private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
 
-        public IEnumerable<Species> GetAllSpecies()
-        {
-            var sql = "SELECT * FROM Species";
-            using (var connection = CreateConnection())
-            {
-                return connection.Query<Species>(sql);
-            }
-        }
-
-        public void Add(T entity)
+        public void Add(Hero entity)
         {
             var sql = @"INSERT INTO Heroes (Name, SpeciesId, Genre, Strange, Hp, TypeOfDamage) 
                        VALUES (@Name, @SpeciesId, @Genre, @Strange, @Hp, @TypeOfDamage)";
@@ -36,7 +27,7 @@ namespace DataAccessLayer.Dapper
             }
         }
 
-        public IEnumerable<T> ReadAll()
+        public IEnumerable<Hero> ReadAll()
         {
             var sql = @"
                 SELECT h.*, s.Id as SpeciesId, s.Name as SpeciesName, s.Description
@@ -45,7 +36,7 @@ namespace DataAccessLayer.Dapper
 
             using (var connection = CreateConnection())
             {
-                return connection.Query<T, Species, T>(sql,
+                return connection.Query<Hero, Species, Hero>(sql,
                     (hero, species) =>
                     {
                         hero.Species = species;
@@ -56,8 +47,7 @@ namespace DataAccessLayer.Dapper
             }
         }
 
-        // метод для пагинации через Dapper
-        public (IEnumerable<T> heroes, int totalCount) ReadAllWithPagination(int pageNumber, int pageSize)
+        public (IEnumerable<Hero> heroes, int totalCount) ReadAllWithPagination(int pageNumber, int pageSize)
         {
             var sql = @"
                 SELECT 
@@ -80,7 +70,7 @@ namespace DataAccessLayer.Dapper
                     PageSize = pageSize
                 }))
                 {
-                    var heroes = multi.Read<T, Species, T>(
+                    var heroes = multi.Read<Hero, Species, Hero>(
                         (hero, species) =>
                         {
                             hero.Species = species;
@@ -106,7 +96,7 @@ namespace DataAccessLayer.Dapper
             }
         }
 
-        public T ReadById(int id)
+        public Hero ReadById(int id)
         {
             var sql = @"
                 SELECT h.*, s.Id as SpeciesId, s.Name as SpeciesName, s.Description
@@ -116,7 +106,7 @@ namespace DataAccessLayer.Dapper
 
             using (var connection = CreateConnection())
             {
-                return connection.Query<T, Species, T>(sql,
+                return connection.Query<Hero, Species, Hero>(sql,
                     (hero, species) =>
                     {
                         hero.Species = species;
@@ -128,7 +118,7 @@ namespace DataAccessLayer.Dapper
             }
         }
 
-        public void Update(T entity)
+        public void Update(Hero entity)
         {
             var sql = @"UPDATE Heroes SET Name = @Name, SpeciesId = @SpeciesId, Genre = @Genre, 
                        Strange = @Strange, Hp = @Hp, TypeOfDamage = @TypeOfDamage 

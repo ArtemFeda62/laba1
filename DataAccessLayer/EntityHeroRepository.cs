@@ -4,15 +4,16 @@ using ЛАБА1;
 
 namespace DataAccessLayer.EntityFramework
 {
-    public class EntityRepository<T> : IRepository<T> where T : Hero, IDomainObject, new()
+    public class EntityHeroRepository : IHeroRepository
     {
         private readonly HeroContext _context;
-        public EntityRepository()
+
+        public EntityHeroRepository()
         {
             _context = new HeroContext();
         }
 
-        public void Add(T entity)
+        public void Add(Hero entity)
         {
             _context.Heroes.Add(entity);
             _context.SaveChanges();
@@ -28,16 +29,17 @@ namespace DataAccessLayer.EntityFramework
             }
         }
 
-        public IEnumerable<T> ReadAll()
+        public IEnumerable<Hero> ReadAll()
         {
-            return _context.Heroes.Include("Species").ToList() as IEnumerable<T>;
+            return _context.Heroes.Include("Species").ToList();
         }
 
-        public T ReadById(int id)
+        public Hero ReadById(int id)
         {
-            return _context.Heroes.Include("Species").FirstOrDefault(h => h.Id == id) as T;
+            return _context.Heroes.Include("Species").FirstOrDefault(h => h.Id == id);
         }
-        public void Update(T entity)
+
+        public void Update(Hero entity)
         {
             var existingHero = _context.Heroes.Find(entity.Id);
             if (existingHero != null)
@@ -45,6 +47,17 @@ namespace DataAccessLayer.EntityFramework
                 _context.Entry(existingHero).CurrentValues.SetValues(entity);
                 _context.SaveChanges();
             }
+        }
+
+        public (IEnumerable<Hero> heroes, int totalCount) ReadAllWithPagination(int pageNumber, int pageSize)
+        {
+            var allHeroes = ReadAll().ToList();
+            var pagedHeroes = allHeroes
+                .Skip((pageNumber - 1) * pageSize)
+                .Take(pageSize)
+                .ToList();
+
+            return (pagedHeroes, allHeroes.Count);
         }
     }
 }

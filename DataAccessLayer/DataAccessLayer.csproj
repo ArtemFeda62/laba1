@@ -71,8 +71,10 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DapperRepository.cs" />
-    <Compile Include="EntityRepository.cs" />
+    <Compile Include="DapperHeroRepository.cs" />
+    <Compile Include="DapperSpeciesRepository.cs" />
+    <Compile Include="EntityHeroRepository.cs" />
+    <Compile Include="EntitySpeciesRepository.cs" />
     <Compile Include="Hero.cs" />
     <Compile Include="HeroContext.cs" />
     <Compile Include="HeroService.cs" />
