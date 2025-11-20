@@ -16,6 +16,7 @@ namespace DataAccessLayer.Dapper
               Integrated Security=True";
 
         private IDbConnection CreateConnection() => new SqlConnection(_connectionString);
+
         public IEnumerable<Species> GetAllSpecies()
         {
             var sql = "SELECT * FROM Species";
@@ -24,6 +25,7 @@ namespace DataAccessLayer.Dapper
                 return connection.Query<Species>(sql);
             }
         }
+
         public void Add(T entity)
         {
             var sql = @"INSERT INTO Heroes (Name, SpeciesId, Genre, Strange, Hp, TypeOfDamage) 
@@ -33,6 +35,7 @@ namespace DataAccessLayer.Dapper
                 connection.Execute(sql, entity);
             }
         }
+
         public IEnumerable<T> ReadAll()
         {
             var sql = @"
@@ -53,6 +56,47 @@ namespace DataAccessLayer.Dapper
             }
         }
 
+        // метод для пагинации через Dapper
+        public (IEnumerable<T> heroes, int totalCount) ReadAllWithPagination(int pageNumber, int pageSize)
+        {
+            var sql = @"
+                SELECT 
+                    h.*, 
+                    s.Id as SpeciesId, 
+                    s.Name as SpeciesName, 
+                    s.Description
+                FROM Heroes h 
+                INNER JOIN Species s ON h.SpeciesId = s.Id
+                ORDER BY h.Id
+                OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+
+                SELECT COUNT(*) FROM Heroes;";
+
+            using (var connection = CreateConnection())
+            {
+                using (var multi = connection.QueryMultiple(sql, new
+                {
+                    Offset = (pageNumber - 1) * pageSize,
+                    PageSize = pageSize
+                }))
+                {
+                    var heroes = multi.Read<T, Species, T>(
+                        (hero, species) =>
+                        {
+                            hero.Species = species;
+                            hero.SpeciesId = species.Id;
+                            return hero;
+                        },
+                        splitOn: "SpeciesId"
+                    ).ToList();
+
+                    var totalCount = multi.ReadSingle<int>();
+
+                    return (heroes, totalCount);
+                }
+            }
+        }
+
         public void Delete(int id)
         {
             var sql = "DELETE FROM Heroes WHERE Id = @Id";
@@ -61,6 +105,7 @@ namespace DataAccessLayer.Dapper
                 connection.Execute(sql, new { Id = id });
             }
         }
+
         public T ReadById(int id)
         {
             var sql = @"
@@ -82,6 +127,7 @@ namespace DataAccessLayer.Dapper
                     splitOn: "SpeciesId").FirstOrDefault();
             }
         }
+
         public void Update(T entity)
         {
             var sql = @"UPDATE Heroes SET Name = @Name, SpeciesId = @SpeciesId, Genre = @Genre, 

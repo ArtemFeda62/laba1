@@ -1,8 +1,9 @@
-﻿using System;
+﻿using DataAccessLayer;
+using DataAccessLayer.Dapper;
+using DataAccessLayer.EntityFramework;
+using System;
 using System.Collections.Generic;
 using System.Linq;
-using DataAccessLayer;
-using DataAccessLayer.EntityFramework;
 using ЛАБА1;
 
 namespace ЛАБА1
@@ -17,10 +18,32 @@ namespace ЛАБА1
             _repository = repository;
             _context = new HeroContext();
         }
+
         public Logic()
         {
             _repository = new EntityRepository<Hero>();
             _context = new HeroContext();
+        }
+
+        //метод для пагинации через Dapper
+        public (List<Hero> heroes, int totalCount) GetHeroesWithDapperPagination(int pageNumber, int pageSize)
+        {
+            if (_repository is DapperRepository<Hero> dapperRepo)
+            {
+                var result = dapperRepo.ReadAllWithPagination(pageNumber, pageSize);
+                return (result.heroes.ToList(), result.totalCount);
+            }
+            else
+            {
+                //для Entity Framework
+                var allHeroes = _repository.ReadAll().ToList();
+                var pagedHeroes = allHeroes
+                    .Skip((pageNumber - 1) * pageSize)
+                    .Take(pageSize)
+                    .ToList();
+
+                return (pagedHeroes, allHeroes.Count);
+            }
         }
         public List<Hero> GetHeroesWithPagination(int pageNumber, int pageSize)
         {
