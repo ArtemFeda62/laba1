@@ -75,7 +75,9 @@
     <Compile Include="EntityRepository.cs" />
     <Compile Include="Hero.cs" />
     <Compile Include="HeroContext.cs" />
+    <Compile Include="HeroService.cs" />
     <Compile Include="IDomainObject.cs" />
+    <Compile Include="IHeroService.cs" />
     <Compile Include="IRepository.cs" />
     <Compile Include="Logic.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

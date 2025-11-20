@@ -1,4 +1,5 @@
 ﻿using BusinessLogicLayer;
+using BusinessLogicLayer.Services;
 using Ninject;
 using System;
 using System.Collections.Generic;
@@ -7,6 +8,7 @@ using System.Drawing;
 using System.Linq;
 using System.Windows.Forms;
 using ЛАБА1;
+
 
 namespace ЛАБА1
 {
@@ -64,6 +66,14 @@ namespace ЛАБА1
             lblTotalPages = new Label { Text = "/ 1", Location = new Point(245, 10), AutoSize = true };
             btnNext = new Button { Text = "›", Location = new Point(270, 7), Width = 30 };
             btnLast = new Button { Text = "»", Location = new Point(305, 7), Width = 30 };
+            var btnStatistics = new Button
+            {
+                Text = "Статистика",
+                Location = new Point(350, 7),
+                Width = 80,
+                Height = 25
+            };
+            btnStatistics.Click += btnStatistics_Click;
 
             btnFirst.Click += (s, e) => { currentPage = 1; RefreshHeroesList(); };
             btnPrev.Click += (s, e) => { if (currentPage > 1) { currentPage--; RefreshHeroesList(); } };
@@ -72,16 +82,106 @@ namespace ЛАБА1
 
             paginationPanel.Controls.AddRange(new Control[]
             {
-                lblPageSize, cmbPageSize,
-                btnFirst, btnPrev, lblCurrentPage, lblTotalPages, btnNext, btnLast
+        lblPageSize, cmbPageSize,
+        btnFirst, btnPrev, lblCurrentPage, lblTotalPages, btnNext, btnLast,
+        btnStatistics
             });
 
             this.Controls.Add(paginationPanel);
         }
+        private void btnStatistics_Click(object sender, EventArgs e)
+        {
+            ShowStatistics();
+        }
+        private void ShowStatistics()
+        {
+            try
+            {
+                IKernel ninjectKernel = new StandardKernel(new SimpleConfigModule());
+                var heroService = ninjectKernel.Get<IHeroService>();
 
-        /// <summary>
-        /// Обновление списка героев с учетом пагинации
-        /// </summary>
+                var statistics = heroService.GetStatistics();
+                DisplayStatisticsInForm(statistics);
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при выводе статистики: {ex.Message}", "Ошибка",
+                               MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+        private void DisplayStatisticsInForm(HeroStatistics stats)
+        {
+            var statsForm = new Form
+            {
+                Text = "Статистика героев",
+                Size = new Size(650, 500),
+                StartPosition = FormStartPosition.CenterParent,
+                MaximizeBox = false,
+                FormBorderStyle = FormBorderStyle.FixedDialog
+            };
+
+            var textBox = new TextBox
+            {
+                Multiline = true,
+                Dock = DockStyle.Fill,
+                ScrollBars = ScrollBars.Vertical,
+                Font = new Font("Consolas", 9),
+                ReadOnly = true,
+                BackColor = Color.White
+            };
+
+            var sb = new System.Text.StringBuilder();
+            sb.AppendLine("═══════════════════════════════════════");
+            sb.AppendLine("             СТАТИСТИКА ГЕРОЕВ");
+            sb.AppendLine("═══════════════════════════════════════");
+            sb.AppendLine();
+
+            sb.AppendLine("ОБЩАЯ СТАТИСТИКА:");
+            sb.AppendLine($"Всего героев: {stats.TotalHeroes}");
+            sb.AppendLine($"Средняя сила: {stats.AverageStrength:F2}");
+            sb.AppendLine($"Среднее HP: {stats.AverageHp:F2}");
+            sb.AppendLine($"Максимальная сила: {stats.MaxStrength}");
+            sb.AppendLine($"Минимальное HP: {stats.MinHp}");
+            sb.AppendLine();
+
+            sb.AppendLine("СТАТИСТИКА ПО РАСАМ:");
+            foreach (var stat in stats.SpeciesStats)
+            {
+                sb.AppendLine($"  {stat.Species}:");
+                sb.AppendLine($"    Количество: {stat.Count} героев");
+                sb.AppendLine($"    Средняя сила: {stat.AvgStrength:F1}");
+                sb.AppendLine($"    Среднее HP: {stat.AvgHp:F1}");
+            }
+            sb.AppendLine();
+
+            sb.AppendLine("СТАТИСТИКА ПО ТИПАМ УРОНА:");
+            foreach (var stat in stats.DamageTypeStats)
+            {
+                sb.AppendLine($"  {stat.DamageType}:");
+                sb.AppendLine($"    Количество: {stat.Count} героев");
+                sb.AppendLine($"    Общая сила: {stat.TotalStrength}");
+            }
+            sb.AppendLine();
+
+            sb.AppendLine("СТАТИСТИКА ПО ГЕНДЕРАМ:");
+            foreach (var stat in stats.GenderStats)
+            {
+                sb.AppendLine($"  {stat.Gender}: {stat.Count} героев ({stat.Percentage:F1}%)");
+            }
+            sb.AppendLine();
+
+            sb.AppendLine($"ГЕРОИ С НИЗКИМ HP (<50): {stats.LowHpHeroes.Count}");
+            foreach (var hero in stats.LowHpHeroes)
+            {
+                sb.AppendLine($"  {hero.Name} - {hero.Hp} HP ({hero.Species?.Name})");
+            }
+            sb.AppendLine();
+            sb.AppendLine("═══════════════════════════════════════");
+
+            textBox.Text = sb.ToString();
+            statsForm.Controls.Add(textBox);
+            statsForm.ShowDialog();
+        }
         /// <summary>
         /// Обновление списка героев с учетом пагинации
         /// </summary>
