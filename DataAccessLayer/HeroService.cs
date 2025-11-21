@@ -42,9 +42,9 @@ namespace BusinessLogicLayer.Services
 
     public class HeroService : IHeroService
     {
-        private readonly IRepository<Hero> _repository;
+        private readonly IHeroRepository _repository;
 
-        public HeroService(IRepository<Hero> repository)
+        public HeroService(IHeroRepository repository)
         {
             _repository = repository;
         }
