@@ -27,14 +27,256 @@ namespace ЛАБА1
         private Button btnLast;
         private ComboBox cmbPageSize;
 
+        // Кнопки для рас
+        private Button btnAddSpecies;
+        private Button btnDeleteSpecies;
+        private Button btnEditSpecies;
+        private Button btnShowSpecies;
+
         public Form1()
         {
             InitializeComponent();
             IKernel ninjectKernel = new StandardKernel(new SimpleConfigModule());
             logic = ninjectKernel.Get<Logic>();
 
+            InitializeSpeciesButtons();
             InitializePaginationControls();
             RefreshHeroesList();
+        }
+
+        /// <summary>
+        /// Инициализация кнопок для работы с расами
+        /// </summary>
+        private void InitializeSpeciesButtons()
+        {
+            // Создаем панель для кнопок
+            var speciesPanel = new Panel
+            {
+                Dock = DockStyle.Top,
+                Height = 40,
+                BackColor = Color.LightGray
+            };
+
+            // Кнопка "Добавить расу"
+            btnAddSpecies = new Button
+            {
+                Text = "Добавить расу",
+                Location = new Point(10, 5),
+                Size = new Size(100, 30),
+                BackColor = Color.Gray
+            };
+            btnAddSpecies.Click += BtnAddSpecies_Click;
+
+            // Кнопка "Удалить расу"
+            btnDeleteSpecies = new Button
+            {
+                Text = "Удалить расу",
+                Location = new Point(120, 5),
+                Size = new Size(100, 30),
+                BackColor = Color.Gray
+            };
+            btnDeleteSpecies.Click += BtnDeleteSpecies_Click;
+
+            // Кнопка "Редактировать расу"
+            btnEditSpecies = new Button
+            {
+                Text = "Редактировать расу",
+                Location = new Point(230, 5),
+                Size = new Size(120, 30),
+                BackColor = Color.Gray
+            };
+            btnEditSpecies.Click += BtnEditSpecies_Click;
+
+            // Кнопка "Показать расы"
+            btnShowSpecies = new Button
+            {
+                Text = "Показать расы",
+                Location = new Point(360, 5),
+                Size = new Size(100, 30),
+                BackColor = Color.Gray
+            };
+            btnShowSpecies.Click += BtnShowSpecies_Click;
+
+            // Добавляем кнопки на панель
+            speciesPanel.Controls.AddRange(new Control[]
+            {
+                btnAddSpecies,
+                btnDeleteSpecies,
+                btnEditSpecies,
+                btnShowSpecies
+            });
+
+            // Добавляем панель на форму
+            this.Controls.Add(speciesPanel);
+        }
+
+        // ==================== ОБРАБОТЧИКИ КНОПОК ДЛЯ РАС ====================
+
+        /// <summary>
+        /// Добавление новой расы
+        /// </summary>
+        private void BtnAddSpecies_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                using (var form = new AddSpeciesForm())
+                {
+                    if (form.ShowDialog() == DialogResult.OK)
+                    {
+                        logic.AddSpecies(form.SpeciesName, form.SpeciesDescription);
+                        MessageBox.Show("Раса успешно добавлена!", "Успех",
+                                      MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при добавлении расы: {ex.Message}", "Ошибка",
+                              MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Удаление расы
+        /// </summary>
+        private void BtnDeleteSpecies_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var speciesList = logic.GetAllSpecies();
+
+                if (!speciesList.Any())
+                {
+                    MessageBox.Show("Нет доступных рас для удаления.", "Информация",
+                                  MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                using (var form = new SelectSpeciesForm(speciesList, "Удаление расы"))
+                {
+                    if (form.ShowDialog() == DialogResult.OK && form.SelectedSpecies != null)
+                    {
+                        var result = MessageBox.Show($"Вы уверены, что хотите удалить расу '{form.SelectedSpecies.Name}'?",
+                                                   "Подтверждение удаления",
+                                                   MessageBoxButtons.YesNo,
+                                                   MessageBoxIcon.Question);
+
+                        if (result == DialogResult.Yes)
+                        {
+                            // Проверяем, есть ли герои этой расы
+                            var heroesWithThisSpecies = logic.GetListHeros()
+                                .Where(h => h.SpeciesId == form.SelectedSpecies.Id)
+                                .ToList();
+
+                            if (heroesWithThisSpecies.Any())
+                            {
+                                MessageBox.Show($"Невозможно удалить расу '{form.SelectedSpecies.Name}'. " +
+                                              $"Существуют герои этой расы. Сначала удалите или измените расу у этих героев.",
+                                              "Ошибка",
+                                              MessageBoxButtons.OK,
+                                              MessageBoxIcon.Error);
+                                return;
+                            }
+
+                            logic.DeleteSpecies(form.SelectedSpecies.Id);
+                            MessageBox.Show("Раса успешно удалена!", "Успех",
+                                          MessageBoxButtons.OK, MessageBoxIcon.Information);
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при удалении расы: {ex.Message}", "Ошибка",
+                              MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Редактирование расы
+        /// </summary>
+        private void BtnEditSpecies_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var speciesList = logic.GetAllSpecies();
+
+                if (!speciesList.Any())
+                {
+                    MessageBox.Show("Нет доступных рас для редактирования.", "Информация",
+                                  MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                using (var form = new SelectSpeciesForm(speciesList, "Редактирование расы"))
+                {
+                    if (form.ShowDialog() == DialogResult.OK && form.SelectedSpecies != null)
+                    {
+                        using (var editForm = new EditSpeciesForm(form.SelectedSpecies))
+                        {
+                            if (editForm.ShowDialog() == DialogResult.OK)
+                            {
+                                var updatedSpecies = new Species
+                                {
+                                    Id = form.SelectedSpecies.Id,
+                                    Name = editForm.SpeciesName,
+                                    Description = editForm.SpeciesDescription
+                                };
+
+                                logic.UpdateSpecies(updatedSpecies);
+                                MessageBox.Show("Раса успешно обновлена!", "Успех",
+                                              MessageBoxButtons.OK, MessageBoxIcon.Information);
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при редактировании расы: {ex.Message}", "Ошибка",
+                              MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+        }
+
+        /// <summary>
+        /// Показать все расы
+        /// </summary>
+        private void BtnShowSpecies_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                var speciesList = logic.GetAllSpecies();
+
+                if (!speciesList.Any())
+                {
+                    MessageBox.Show("Нет доступных рас.", "Информация",
+                                  MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    return;
+                }
+
+                var resultForm = new Form
+                {
+                    Text = "Все расы",
+                    Size = new Size(500, 400),
+                    StartPosition = FormStartPosition.CenterParent
+                };
+
+                var dataGridView = new DataGridView
+                {
+                    Dock = DockStyle.Fill,
+                    DataSource = speciesList,
+                    ReadOnly = true,
+                    AutoGenerateColumns = true
+                };
+
+                resultForm.Controls.Add(dataGridView);
+                resultForm.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при отображении рас: {ex.Message}", "Ошибка",
+                              MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
         }
 
         /// <summary>
@@ -89,17 +331,18 @@ namespace ЛАБА1
 
             this.Controls.Add(paginationPanel);
         }
+
         private void btnStatistics_Click(object sender, EventArgs e)
         {
             ShowStatistics();
         }
+
         private void ShowStatistics()
         {
             try
             {
                 IKernel ninjectKernel = new StandardKernel(new SimpleConfigModule());
                 var heroService = ninjectKernel.Get<IHeroService>();
-
                 var statistics = heroService.GetStatistics();
                 DisplayStatisticsInForm(statistics);
             }
@@ -109,6 +352,7 @@ namespace ЛАБА1
                                MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
+
         private void DisplayStatisticsInForm(HeroStatistics stats)
         {
             var statsForm = new Form
@@ -147,10 +391,10 @@ namespace ЛАБА1
             sb.AppendLine("СТАТИСТИКА ПО РАСАМ:");
             foreach (var stat in stats.SpeciesStats)
             {
-                sb.AppendLine($"  {stat.Species}:");
-                sb.AppendLine($"    Количество: {stat.Count} героев");
-                sb.AppendLine($"    Средняя сила: {stat.AvgStrength:F1}");
-                sb.AppendLine($"    Среднее HP: {stat.AvgHp:F1}");
+                sb.AppendLine($"{stat.Species}:");
+                sb.AppendLine($"Количество: {stat.Count} героев");
+                sb.AppendLine($"Средняя сила: {stat.AvgStrength:F1}");
+                sb.AppendLine($"Среднее HP: {stat.AvgHp:F1}");
             }
             sb.AppendLine();
 
@@ -158,8 +402,8 @@ namespace ЛАБА1
             foreach (var stat in stats.DamageTypeStats)
             {
                 sb.AppendLine($"  {stat.DamageType}:");
-                sb.AppendLine($"    Количество: {stat.Count} героев");
-                sb.AppendLine($"    Общая сила: {stat.TotalStrength}");
+                sb.AppendLine($"Количество: {stat.Count} героев");
+                sb.AppendLine($"Общая сила: {stat.TotalStrength}");
             }
             sb.AppendLine();
 
@@ -182,6 +426,7 @@ namespace ЛАБА1
             statsForm.Controls.Add(textBox);
             statsForm.ShowDialog();
         }
+
         /// <summary>
         /// Обновление списка героев с учетом пагинации
         /// </summary>
@@ -275,7 +520,7 @@ namespace ЛАБА1
             });
             dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
             {
-                DataPropertyName = "SpeciesName", 
+                DataPropertyName = "SpeciesName",
                 HeaderText = "Раса",
                 Width = 100
             });
