@@ -34,7 +34,7 @@ namespace BusinessLogic.Services
         {
             if (_heroRepository is DapperHeroRepository dapperRepo)
             {
-                var result = dapperRepo.ReadAllWithPagination(pageNumber, pageSize);
+                var result = dapperRepo.GetAllWithPagination(pageNumber, pageSize);
                 return (result.heroes.ToList(), result.totalCount);
             }
             else
@@ -66,24 +66,33 @@ namespace BusinessLogic.Services
         // Методы для работы с героями
         public void CreateHero(string name, int speciesId, string genre, int strange, string typeofdamage, double hp)
         {
-            var hero = new Hero(name, speciesId, genre, strange, typeofdamage, hp);
+            var hero = new Hero
+            {
+                Name = name,
+                SpeciesId = speciesId,
+                Genre = genre,
+                Strange = strange,
+                TypeOfDamage = typeofdamage,
+                Hp = hp
+            };
             _heroRepository.Add(hero);
         }
 
         public Hero GetHero(int id) => _heroRepository.ReadById(id);
 
-        public List<Hero> GetListHeros() => _heroRepository.ReadAll().ToList();
+        public List<Hero> GetAllHeroes() => _heroRepository.ReadAll().ToList();
 
         public void UpdateHero(Hero hero) => _heroRepository.Update(hero);
 
-        public void KillHero(int id) => _heroRepository.Delete(id);
+        public void DeleteHero(int id) => _heroRepository.Delete(id);
 
-        public void HitHero(int id, double damage)
+        public void ApplyDamage(int id, double damage)
         {
             var hero = _heroRepository.ReadById(id);
             if (hero != null)
             {
                 hero.Hp -= damage;
+                if (hero.Hp < 0) hero.Hp = 0;
                 _heroRepository.Update(hero);
             }
         }
@@ -164,6 +173,66 @@ namespace BusinessLogic.Services
                 .ToList();
         }
 
+
+        public HeroStatistics GetStatistics()
+        {
+            var heroes = _heroRepository.ReadAll().ToList();
+
+            if (heroes.Count == 0)
+            {
+                return new HeroStatistics
+                {
+                    TotalHeroes = 0,
+                    AverageStrength = 0,
+                    AverageHp = 0,
+                    MaxStrength = 0,
+                    MinHp = 0,
+                    SpeciesStats = new List<SpeciesStat>(),
+                    DamageTypeStats = new List<DamageTypeStat>(),
+                    GenderStats = new List<GenderStat>(),
+                    LowHpHeroes = new List<Hero>()
+                };
+            }
+
+            var statistics = new HeroStatistics
+            {
+                TotalHeroes = heroes.Count,
+                AverageStrength = heroes.Average(h => h.Strange),
+                AverageHp = heroes.Average(h => h.Hp),
+                MaxStrength = heroes.Max(h => h.Strange),
+                MinHp = heroes.Min(h => h.Hp),
+                SpeciesStats = heroes
+                    .Where(h => h.Species != null)
+                    .GroupBy(h => h.Species.Name)
+                    .Select(g => new SpeciesStat
+                    {
+                        Species = g.Key,
+                        Count = g.Count(),
+                        AvgStrength = g.Average(h => h.Strange),
+                        AvgHp = g.Average(h => h.Hp)
+                    }).ToList(),
+                DamageTypeStats = heroes
+                    .GroupBy(h => h.TypeOfDamage)
+                    .Select(g => new DamageTypeStat
+                    {
+                        DamageType = g.Key,
+                        Count = g.Count(),
+                        TotalStrength = g.Sum(h => h.Strange)
+                    }).ToList(),
+                GenderStats = heroes
+                    .GroupBy(h => h.Genre)
+                    .Select(g => new GenderStat
+                    {
+                        Gender = g.Key,
+                        Count = g.Count(),
+                        Percentage = (g.Count() * 100.0) / heroes.Count
+                    }).ToList(),
+                LowHpHeroes = GetHeroesWithLowHp(50)
+            };
+
+            return statistics;
+        }
+
         // Методы для работы с контекстом (если нужны для обратной совместимости)
         public List<Species> GetAllSpeciesFromContext()
         {
@@ -182,5 +251,70 @@ namespace BusinessLogic.Services
             return _context.Species.FirstOrDefault(s => s.Id == id);
         }
     }
-}
-}
+
+        public HeroStatistics GetStatistics()
+        {
+            var heroes = _heroRepository.ReadAll().ToList();
+
+            if (!heroes.Any())
+            {
+                return new HeroStatistics
+                {
+                    TotalHeroes = 0,
+                    AverageStrength = 0,
+                    AverageHp = 0,
+                    MaxStrength = 0,
+                    MinHp = 0,
+                    SpeciesStats = new List<SpeciesStat>(),
+                    DamageTypeStats = new List<DamageTypeStat>(),
+                    GenderStats = new List<GenderStat>(),
+                    LowHpHeroes = new List<Hero>()
+                };
+            }
+
+            // Группировка по расам
+            var speciesStats = heroes
+                .Where(h => h.Species != null)
+                .GroupBy(h => h.Species.Name)
+                .Select(g => new SpeciesStat
+                {
+                    Species = g.Key,
+                    Count = g.Count(),
+                    AvgStrength = g.Average(h => h.Strange),
+                    AvgHp = g.Average(h => h.Hp)
+                }).ToList();
+
+            // Группировка по типу урона
+            var damageStats = heroes
+                .GroupBy(h => h.TypeOfDamage)
+                .Select(g => new DamageTypeStat
+                {
+                    DamageType = g.Key,
+                    Count = g.Count(),
+                    TotalStrength = g.Sum(h => h.Strange)
+                }).ToList();
+
+            // Группировка по гендеру
+            var genderStats = heroes
+                .GroupBy(h => h.Genre)
+                .Select(g => new GenderStat
+                {
+                    Gender = g.Key,
+                    Count = g.Count(),
+                    Percentage = (g.Count() * 100.0) / heroes.Count
+                }).ToList();
+
+            return new HeroStatistics
+            {
+                TotalHeroes = heroes.Count,
+                AverageStrength = heroes.Average(h => h.Strange),
+                AverageHp = heroes.Average(h => h.Hp),
+                MaxStrength = heroes.Max(h => h.Strange),
+                MinHp = heroes.Min(h => h.Hp),
+                SpeciesStats = speciesStats,
+                DamageTypeStats = damageStats,
+                GenderStats = genderStats,
+                LowHpHeroes = GetHeroesWithLowHp(50)
+            };
+        }
+    }
