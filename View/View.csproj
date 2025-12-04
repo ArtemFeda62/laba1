@@ -1,0 +1,53 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <OutputType>WinExe</OutputType>
+    <UseWindowsForms>True</UseWindowsForms>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Ninject" Version="3.3.6" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\BusinessLogic\BusinessLogic.csproj" />
+    <ProjectReference Include="..\ConsoleInterface\ConsoleInterface.csproj" />
+    <ProjectReference Include="..\DataAccess\DataAccess.csproj" />
+    <ProjectReference Include="..\Domain\Domain.csproj" />
+    <ProjectReference Include="..\Presenters\Presenters.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="System.Windows.Forms">
+      <HintPath>..\..\..\..\..\..\Program Files (x86)\Reference Assemblies\Microsoft\Framework\.NETFramework\v4.7.2\System.Windows.Forms.dll</HintPath>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="Forms\SpeciesListForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\AddHeroForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\AddSpeciesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\EditSpeciesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\Form1.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\HitHeroForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Update="Forms\SelectSpeciesForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+  </ItemGroup>
+
+</Project>
