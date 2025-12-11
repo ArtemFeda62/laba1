@@ -1,4 +1,5 @@
-﻿using DataAccessLayer.EntityFramework;
+﻿using DataAccessLayer.Dapper;
+using DataAccessLayer.EntityFramework;
 using Ninject.Modules;
 using Shared.Interfases;
 using System;
@@ -13,8 +14,8 @@ namespace BusinessLogicLayer
     {
         public override void Load()
         {
-            Bind<IHeroRepository>().To<EntityHeroRepository>().InSingletonScope();
-            Bind<ISpeciesRepository>().To<EntitySpeciesRepository>().InSingletonScope();
+            Bind<IHeroRepository>().To<DapperHeroRepository>().InSingletonScope();
+            Bind<ISpeciesRepository>().To<DapperSpeciesRepository>().InSingletonScope();
             Bind<IHeroService>().To<HeroService>().InSingletonScope();
             Bind<Logic>().ToSelf();
         }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading;
 using System.Windows.Forms;
+using DataAccessLayer.EntityFramework;
 
 namespace View
 {
@@ -15,6 +16,7 @@ namespace View
         [STAThread]
         static void Main(string[] args)
         {
+            DatabaseCreator.InitializeDatabase();
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
             StartBothInterfaces();
