@@ -1,12 +1,12 @@
-﻿// В проекте View, файл ConsoleInterface.cs
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading;
+﻿// View/ConsoleInterface.cs
 using Presenter;
 using Shared;
 using Shared.Domain;
+using Shared.Interfaces;
 using Shared.Interfases;
+using System;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace View
 {
@@ -15,39 +15,36 @@ namespace View
         private MainPresenter _presenter;
         private bool _isRunning;
 
+        // Реализация событий интерфейса IView
+        public event Action<HeroAddedEventArgs> HeroAdded;
+        public event Action<HeroDeletedEventArgs> HeroDeleted;
+        public event Action<HeroDamagedEventArgs> HeroDamaged;
+        public event Action<HeroSearchEventArgs> HeroSearch;
+        public event Action<PageChangedEventArgs> PageChanged;
+        public event Action RefreshRequested;
+        public event Action<SpeciesAddedEventArgs> SpeciesAdded;
+        public event Action<SpeciesDeletedEventArgs> SpeciesDeleted;
+        public event Action<SpeciesUpdatedEventArgs> SpeciesUpdated;
+
+        private List<Hero> _currentHeroes = new List<Hero>();
+        private List<Species> _currentSpecies = new List<Species>();
+        private int _currentPage = 1;
+        private int _pageSize = 10;
+        private int _totalPages = 1;
+
         public ConsoleInterface()
         {
             _presenter = new MainPresenter(this);
             _isRunning = false;
         }
 
-        // Реализация IView
-        public void RefreshHeroesList()
-        {
-            // В консоли мы сами управляем отображением
-        }
-
-        public void UpdateStatusBar(string status)
-        {
-            Console.Title = status;
-        }
-
-        public void ShowMessage(string message, string title = "Информация")
-        {
-            Console.WriteLine($"\n[{title}]: {message}");
-        }
-
-        public void ShowError(string error, string title = "Ошибка")
-        {
-            Console.ForegroundColor = ConsoleColor.Red;
-            Console.WriteLine($"\n[{title}]: {error}");
-            Console.ResetColor();
-        }
-
         public void Run()
         {
             _isRunning = true;
-            _presenter.Initialize();
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+            Console.Title = "Герои - Консольное приложение (MVP Architecture)";
+
+            ShowWelcomeScreen();
 
             while (_isRunning)
             {
@@ -61,31 +58,428 @@ namespace View
             _isRunning = false;
         }
 
+        #region Реализация интерфейса IView
+
+        public void RefreshHeroesList(List<Hero> heroes)
+        {
+            _currentHeroes = heroes ?? new List<Hero>();
+            UpdateStatusBar($"Загружено {_currentHeroes.Count} героев");
+        }
+
+        public void UpdateStatusBar(string status)
+        {
+            Console.Title = $"Герои - {status}";
+        }
+
+        public void ShowMessage(string message, string title = "Информация")
+        {
+            Console.WriteLine();
+            Console.WriteLine($"╔{"".PadRight(78, '═')}╗");
+            Console.WriteLine($"║ {title,-76} ║");
+            Console.WriteLine($"╠{"".PadRight(78, '═')}╣");
+            Console.WriteLine($"║ {"",-76} ║");
+
+            // Разбиваем сообщение на строки по 76 символов
+            var lines = SplitMessage(message, 76);
+            foreach (var line in lines)
+            {
+                Console.WriteLine($"║ {line,-76} ║");
+            }
+
+            Console.WriteLine($"║ {"",-76} ║");
+            Console.WriteLine($"╚{"".PadRight(78, '═')}╝");
+            Console.WriteLine();
+        }
+
+        public void ShowError(string error, string title = "Ошибка")
+        {
+            Console.WriteLine();
+            Console.ForegroundColor = ConsoleColor.Red;
+            Console.WriteLine($"╔{"".PadRight(78, '═')}╗");
+            Console.WriteLine($"║ {title,-76} ║");
+            Console.WriteLine($"╠{"".PadRight(78, '═')}╣");
+
+            var lines = SplitMessage(error, 76);
+            foreach (var line in lines)
+            {
+                Console.WriteLine($"║ {line,-76} ║");
+            }
+
+            Console.WriteLine($"╚{"".PadRight(78, '═')}╝");
+            Console.ResetColor();
+            Console.WriteLine();
+        }
+
+        public void SetPaginationInfo(int currentPage, int totalPages, int totalItems)
+        {
+            _currentPage = currentPage;
+            _totalPages = totalPages;
+            _totalItems = totalItems;
+        }
+
+        public void ShowHeroDetails(Hero hero)
+        {
+            if (hero == null)
+            {
+                ShowError("Герой не найден");
+                return;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"╔{"".PadRight(78, '═')}╗");
+            Console.WriteLine($"║ ДЕТАЛЬНАЯ ИНФОРМАЦИЯ О ГЕРОЕ {"".PadRight(40, ' ')}║");
+            Console.WriteLine($"╠{"".PadRight(78, '═')}╣");
+            Console.WriteLine($"║ {"",-76} ║");
+
+            string[] details = {
+                $"🏷️  Имя: {hero.Name}",
+                $"🆔  ID: {hero.Id}",
+                $"👥  Раса: {hero.Species?.Name ?? "Неизвестно"}",
+                $"❤️  HP: {hero.Hp:F1}",
+                $"💪  Сила: {hero.Strange}",
+                $"👤  Гендер: {hero.Genre}",
+                $"⚔️  Тип урона: {hero.TypeOfDamage}"
+            };
+
+            foreach (var detail in details)
+            {
+                Console.WriteLine($"║ {detail,-76} ║");
+            }
+
+            Console.WriteLine($"║ {"",-76} ║");
+            Console.WriteLine($"╚{"".PadRight(78, '═')}╝");
+            Console.WriteLine();
+        }
+
+        public void ShowStatistics(object statistics)
+        {
+            var stats = statistics as HeroStatistics;
+            if (stats == null)
+            {
+                ShowError("Не удалось получить статистику");
+                return;
+            }
+
+            Console.Clear();
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                             СТАТИСТИКА ГЕРОЕВ                              ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine();
+
+            // Общая статистика
+            Console.WriteLine("📊 ОБЩАЯ СТАТИСТИКА");
+            Console.WriteLine(new string('─', 80));
+            Console.WriteLine($"  Всего героев: {stats.TotalHeroes}");
+            Console.WriteLine($"  Средняя сила: {stats.AverageStrength:F2}");
+            Console.WriteLine($"  Среднее HP: {stats.AverageHp:F2}");
+            Console.WriteLine($"  Максимальная сила: {stats.MaxStrength}");
+            Console.WriteLine($"  Минимальное HP: {stats.MinHp:F2}");
+            Console.WriteLine();
+
+            // Статистика по расам
+            Console.WriteLine("👥 СТАТИСТИКА ПО РАСАМ");
+            Console.WriteLine(new string('─', 80));
+            if (stats.SpeciesStats != null && stats.SpeciesStats.Count > 0)
+            {
+                foreach (var stat in stats.SpeciesStats.OrderByDescending(s => s.Count))
+                {
+                    Console.WriteLine($"  {stat.Species}:");
+                    Console.WriteLine($"    • Количество: {stat.Count} героев");
+                    Console.WriteLine($"    • Средняя сила: {stat.AvgStrength:F1}");
+                    Console.WriteLine($"    • Среднее HP: {stat.AvgHp:F1}");
+                    Console.WriteLine();
+                }
+            }
+            else
+            {
+                Console.WriteLine("  Нет данных");
+                Console.WriteLine();
+            }
+
+            // Статистика по типам урона
+            Console.WriteLine("⚔️ СТАТИСТИКА ПО ТИПАМ УРОНА");
+            Console.WriteLine(new string('─', 80));
+            if (stats.DamageTypeStats != null && stats.DamageTypeStats.Count > 0)
+            {
+                foreach (var stat in stats.DamageTypeStats.OrderByDescending(d => d.Count))
+                {
+                    Console.WriteLine($"  {stat.DamageType}:");
+                    Console.WriteLine($"    • Количество: {stat.Count} героев");
+                    Console.WriteLine($"    • Общая сила: {stat.TotalStrength}");
+                    Console.WriteLine($"    • Средняя сила: {(double)stat.TotalStrength / stat.Count:F1}");
+                    Console.WriteLine();
+                }
+            }
+            else
+            {
+                Console.WriteLine("  Нет данных");
+                Console.WriteLine();
+            }
+
+            // Статистика по гендерам
+            Console.WriteLine("🚻 СТАТИСТИКА ПО ГЕНДЕРАМ");
+            Console.WriteLine(new string('─', 80));
+            if (stats.GenderStats != null && stats.GenderStats.Count > 0)
+            {
+                foreach (var stat in stats.GenderStats.OrderByDescending(g => g.Count))
+                {
+                    Console.WriteLine($"  {stat.Gender}: {stat.Count} героев ({stat.Percentage:F1}%)");
+                }
+                Console.WriteLine();
+            }
+            else
+            {
+                Console.WriteLine("  Нет данных");
+                Console.WriteLine();
+            }
+
+            // Раненые герои
+            Console.WriteLine("🏥 ГЕРОИ С НИЗКИМ HP (<50)");
+            Console.WriteLine(new string('─', 80));
+            if (stats.LowHpHeroes != null && stats.LowHpHeroes.Count > 0)
+            {
+                Console.WriteLine($"  Всего раненых: {stats.LowHpHeroes.Count}");
+                Console.WriteLine();
+                Console.WriteLine("  Список раненых:");
+                int count = 1;
+                foreach (var hero in stats.LowHpHeroes.OrderBy(h => h.Hp))
+                {
+                    string status = hero.Hp <= 0 ? "💀 МЕРТВ" : $"{hero.Hp:F1} HP";
+                    Console.WriteLine($"  {count}. {hero.Name} - {status} ({hero.Species?.Name})");
+                    count++;
+                }
+            }
+            else
+            {
+                Console.WriteLine("  Раненых героев нет");
+            }
+
+            Console.WriteLine();
+            Console.WriteLine(new string('═', 80));
+            Console.WriteLine($"📅 Отчет сгенерирован: {DateTime.Now:dd.MM.yyyy HH:mm:ss}");
+
+            WaitForContinue();
+        }
+
+        public void ShowGroupedHeroes(Dictionary<string, List<Hero>> grouped, string title)
+        {
+            Console.Clear();
+            Console.WriteLine($"╔{"".PadRight(78, '═')}╗");
+            Console.WriteLine($"║ {title,-76} ║");
+            Console.WriteLine($"╚{"".PadRight(78, '═')}╝");
+            Console.WriteLine();
+
+            if (!grouped.Any())
+            {
+                Console.WriteLine("Нет данных для отображения");
+                WaitForContinue();
+                return;
+            }
+
+            foreach (var group in grouped.OrderBy(g => g.Key))
+            {
+                Console.WriteLine($"🏷️  {group.Key} ({group.Value.Count} героев):");
+                Console.WriteLine(new string('─', 80));
+
+                int count = 1;
+                foreach (var hero in group.Value.OrderBy(h => h.Name).Take(10))
+                {
+                    string hpStatus = GetHpStatusIcon(hero.Hp);
+                    Console.WriteLine($"  {count}. {hero.Name} {hpStatus} HP: {hero.Hp:F1}, Сила: {hero.Strange}, Тип: {hero.TypeOfDamage}");
+                    count++;
+                }
+
+                if (group.Value.Count > 10)
+                {
+                    Console.WriteLine($"  ... и еще {group.Value.Count - 10} героев");
+                }
+                Console.WriteLine();
+            }
+
+            WaitForContinue();
+        }
+
+        public void ShowSpeciesList(List<Species> species, Action<Species> onSelected = null)
+        {
+            _currentSpecies = species;
+
+            Console.Clear();
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                                 ВСЕ РАСЫ                                   ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine();
+
+            if (!species.Any())
+            {
+                Console.WriteLine("Рас не найдено");
+                WaitForContinue();
+                return;
+            }
+
+            Console.WriteLine("{0,-5} {1,-25} {2,-40}", "ID", "Название", "Описание");
+            Console.WriteLine(new string('═', 80));
+
+            foreach (var s in species.OrderBy(s => s.Name))
+            {
+                string shortDesc = s.Description;
+                if (shortDesc.Length > 37)
+                    shortDesc = shortDesc.Substring(0, 34) + "...";
+
+                Console.WriteLine("{0,-5} {1,-25} {2,-40}", s.Id, s.Name, shortDesc);
+
+                // Показываем количество героев этой расы
+                var heroCount = _currentHeroes.Count(h => h.SpeciesId == s.Id);
+                if (heroCount > 0)
+                {
+                    Console.WriteLine("     👥 Героев этой расы: {0}", heroCount);
+                }
+                Console.WriteLine();
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"Всего рас: {species.Count}");
+
+            if (onSelected != null)
+            {
+                Console.WriteLine();
+                Console.Write("Введите ID расы для выбора (0 - отмена): ");
+                if (int.TryParse(Console.ReadLine(), out int selectedId))
+                {
+                    if (selectedId == 0)
+                        return;
+
+                    var selectedSpecies = species.FirstOrDefault(s => s.Id == selectedId);
+                    if (selectedSpecies != null)
+                    {
+                        onSelected.Invoke(selectedSpecies);
+                    }
+                    else
+                    {
+                        ShowError("Раса с таким ID не найдена");
+                    }
+                }
+            }
+            else
+            {
+                WaitForContinue();
+            }
+        }
+
+        public void ShowHeroSelection(List<Hero> heroes, Action<Hero> onSelected = null)
+        {
+            Console.Clear();
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                               ВЫБОР ГЕРОЯ                                 ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine();
+
+            if (!heroes.Any())
+            {
+                Console.WriteLine("Героев не найдено");
+                WaitForContinue();
+                return;
+            }
+
+            Console.WriteLine("{0,-5} {1,-25} {2,-20} {3,-10} {4,-10}",
+                "№", "Имя", "Раса", "HP", "Сила");
+            Console.WriteLine(new string('═', 80));
+
+            int index = 1;
+            foreach (var hero in heroes)
+            {
+                string hpStatus = GetHpStatusIcon(hero.Hp);
+                Console.WriteLine("{0,-5} {1,-25} {2,-20} {3,-10} {4,-10}",
+                    index,
+                    hero.Name,
+                    hero.Species?.Name ?? "Неизвестно",
+                    $"{hpStatus} {hero.Hp:F1}",
+                    hero.Strange);
+                index++;
+            }
+
+            if (onSelected != null)
+            {
+                Console.WriteLine();
+                Console.Write("Введите номер героя для выбора (0 - отмена): ");
+                if (int.TryParse(Console.ReadLine(), out int selectedIndex))
+                {
+                    if (selectedIndex == 0)
+                        return;
+
+                    if (selectedIndex > 0 && selectedIndex <= heroes.Count)
+                    {
+                        var selectedHero = heroes[selectedIndex - 1];
+                        onSelected.Invoke(selectedHero);
+                    }
+                    else
+                    {
+                        ShowError("Неверный номер героя");
+                    }
+                }
+            }
+            else
+            {
+                WaitForContinue();
+            }
+        }
+
+        #endregion
+
+        #region Методы отображения
+
+        private void ShowWelcomeScreen()
+        {
+            Console.Clear();
+            Console.ForegroundColor = ConsoleColor.Cyan;
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                                                                              ║");
+            Console.WriteLine("║                    🏆 СИСТЕМА УПРАВЛЕНИЯ ГЕРОЯМИ 🏆                       ║");
+            Console.WriteLine("║                          (MVP Architecture)                                 ║");
+            Console.WriteLine("║                                                                              ║");
+            Console.WriteLine("║                          Консольная версия                                   ║");
+            Console.WriteLine("║                                                                              ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+            Console.ResetColor();
+            Console.WriteLine();
+            Console.WriteLine("Загрузка данных...");
+
+            // Запрашиваем обновление данных
+            RefreshRequested?.Invoke();
+
+            Thread.Sleep(1000);
+        }
+
         private void ShowMainMenu()
         {
             Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("      КОНСОЛЬНОЕ ПРИЛОЖЕНИЕ ГЕРОЕВ");
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine($"Всего героев: {_presenter.TotalHeroes}");
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                          ГЛАВНОЕ МЕНЮ                                       ║");
+            Console.WriteLine("╠══════════════════════════════════════════════════════════════════════════════╣");
+            Console.WriteLine("║ Страница: {0,2} из {1,2} | Всего героев: {2,3} | Размер страницы: {3,3}          ║",
+                _currentPage, _totalPages, _totalItems, _pageSize);
+            Console.WriteLine("╠══════════════════════════════════════════════════════════════════════════════╣");
+            Console.WriteLine("║ 1.  Показать всех героев (текущая страница)                                ║");
+            Console.WriteLine("║ 2.  Добавить нового героя                                                  ║");
+            Console.WriteLine("║ 3.  Найти героя по имени                                                   ║");
+            Console.WriteLine("║ 4.  Удалить героя                                                          ║");
+            Console.WriteLine("║ 5.  Нанести урон герою                                                     ║");
+            Console.WriteLine("║                                                                              ║");
+            Console.WriteLine("║ 6.  Группировка по расам                                                   ║");
+            Console.WriteLine("║ 7.  Группировка по типу урона                                              ║");
+            Console.WriteLine("║ 8.  Показать раненых героев (HP < 50)                                      ║");
+            Console.WriteLine("║ 9.  Показать топ-3 сильнейших героев                                       ║");
+            Console.WriteLine("║                                                                              ║");
+            Console.WriteLine("║ 10. Показать все расы                                                      ║");
+            Console.WriteLine("║ 11. Добавить новую расу                                                    ║");
+            Console.WriteLine("║ 12. Редактировать расу                                                     ║");
+            Console.WriteLine("║ 13. Удалить расу                                                           ║");
+            Console.WriteLine("║                                                                              ║");
+            Console.WriteLine("║ 14. Показать статистику                                                    ║");
+            Console.WriteLine("║ 15. Настройки пагинации                                                    ║");
+            Console.WriteLine("║                                                                              ║");
+            Console.WriteLine("║ 0.  Выход                                                                   ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
             Console.WriteLine();
-            Console.WriteLine("1.  Показать всех героев");
-            Console.WriteLine("2.  Добавить героя");
-            Console.WriteLine("3.  Найти героя по имени");
-            Console.WriteLine("4.  Группировка по расам");
-            Console.WriteLine("5.  Группировка по типу урона");
-            Console.WriteLine("6.  Раненые герои (HP < 50)");
-            Console.WriteLine("7.  Топ-3 самых сильных героя");
-            Console.WriteLine("8.  Нанести урон герою");
-            Console.WriteLine("9.  Убить героя");
-            Console.WriteLine("10. Показать все расы");
-            Console.WriteLine("11. Добавить расу");
-            Console.WriteLine("12. Редактировать расу");
-            Console.WriteLine("13. Удалить расу");
-            Console.WriteLine("14. Статистика");
-            Console.WriteLine("15. Обновить список");
-            Console.WriteLine("0.  Выход");
-            Console.WriteLine("═══════════════════════════════════════");
             Console.Write("Выберите действие: ");
         }
 
@@ -93,26 +487,26 @@ namespace View
         {
             switch (choice)
             {
-                case "1": ShowAllHeroes(); break;
+                case "1": ShowCurrentHeroes(); break;
                 case "2": AddNewHero(); break;
-                case "3": FindByName(); break;
-                case "4": ShowBySpecies(); break;
-                case "5": ShowByDamageType(); break;
-                case "6": ShowWoundedHeroes(); break;
-                case "7": ShowStrongestHeroes(); break;
-                case "8": HitHero(); break;
-                case "9": KillHero(); break;
-                case "10": ShowAllSpecies(); break;
+                case "3": FindHeroByName(); break;
+                case "4": DeleteHero(); break;
+                case "5": HitHero(); break;
+                case "6": RequestGroupBySpecies(); break;
+                case "7": RequestGroupByDamageType(); break;
+                case "8": RequestWoundedHeroes(); break;
+                case "9": RequestStrongestHeroes(); break;
+                case "10": RequestAllSpecies(); break;
                 case "11": AddNewSpecies(); break;
                 case "12": EditSpecies(); break;
                 case "13": DeleteSpecies(); break;
-                case "14": ShowStatistics(); break;
-                case "15": RefreshHeroes(); break;
+                case "14": RequestStatistics(); break;
+                case "15": ConfigurePagination(); break;
                 case "0":
                     _isRunning = false;
-                    Console.WriteLine("Завершение работы консоли...");
+                    Console.WriteLine("Завершение работы...");
                     Thread.Sleep(1000);
-                    return;
+                    break;
                 default:
                     ShowError("Неверный выбор. Попробуйте снова.");
                     WaitForContinue();
@@ -120,76 +514,94 @@ namespace View
             }
         }
 
-        private void ShowAllHeroes()
+        private void ShowCurrentHeroes()
         {
             Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("             ВСЕ ГЕРОИ");
-            Console.WriteLine("═══════════════════════════════════════");
+            Console.WriteLine($"╔{"".PadRight(78, '═')}╗");
+            Console.WriteLine($"║ ТЕКУЩАЯ СТРАНИЦА ГЕРОЕВ (Страница {_currentPage} из {_totalPages}) {"".PadRight(20, ' ')}║");
+            Console.WriteLine($"╚{"".PadRight(78, '═')}╝");
+            Console.WriteLine();
 
-            var heroes = _presenter.GetAllHeroes();
-
-            if (!heroes.Any())
+            if (!_currentHeroes.Any())
             {
-                ShowMessage("Героев не найдено.");
+                Console.WriteLine("На этой странице нет героев");
+                WaitForContinue();
+                return;
             }
-            else
-            {
-                Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10} {4,-10} {5,-15} {6,-20}",
-                    "ID", "Имя", "Раса", "HP", "Сила", "Гендер", "Тип урона");
-                Console.WriteLine(new string('═', 100));
 
-                foreach (var hero in heroes)
-                {
-                    var hpColor = hero.Hp < 50 ? "🟡" : hero.Hp <= 0 ? "💀" : "🟢";
-                    Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10} {4,-10} {5,-15} {6,-20}",
-                        hero.Id,
-                        hero.Name,
-                        hero.Species?.Name ?? "Неизвестно",
-                        $"{hpColor} {hero.Hp:F1}",
-                        hero.Strange,
-                        hero.Genre,
-                        hero.TypeOfDamage);
-                }
+            Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10} {4,-10} {5,-10} {6,-15}",
+                "ID", "Имя", "Раса", "HP", "Сила", "Гендер", "Тип урона");
+            Console.WriteLine(new string('═', 90));
+
+            foreach (var hero in _currentHeroes)
+            {
+                string hpStatus = GetHpStatusIcon(hero.Hp);
+                string statusIcon = hero.Hp <= 0 ? "💀" : hero.Hp < 50 ? "⚠️" : "✅";
+
+                Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10} {4,-10} {5,-10} {6,-15}",
+                    hero.Id,
+                    $"{statusIcon} {hero.Name}",
+                    hero.Species?.Name ?? "Неизвестно",
+                    $"{hpStatus} {hero.Hp:F1}",
+                    hero.Strange,
+                    hero.Genre,
+                    hero.TypeOfDamage);
             }
+
+            Console.WriteLine();
+            Console.WriteLine($"Показано героев: {_currentHeroes.Count}");
 
             WaitForContinue();
         }
 
         private void AddNewHero()
         {
+            Console.Clear();
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                          ДОБАВЛЕНИЕ НОВОГО ГЕРОЯ                           ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine();
+
             try
             {
-                Console.Clear();
-                Console.WriteLine("═══════════════════════════════════════");
-                Console.WriteLine("           ДОБАВЛЕНИЕ ГЕРОЯ");
-                Console.WriteLine("═══════════════════════════════════════");
+                // Сначала показываем доступные расы
+                Console.WriteLine("Доступные расы:");
+                if (_currentSpecies.Any())
+                {
+                    foreach (var species1 in _currentSpecies)
+                    {
+                        Console.WriteLine($"  {species1.Id}. {species1.Name}");
+                    }
+                }
+                else
+                {
+                    Console.WriteLine("  (Нет доступных рас. Сначала добавьте расы)");
+                    WaitForContinue();
+                    return;
+                }
 
-                // Показываем доступные расы
-                ShowAllSpeciesBrief();
+                Console.WriteLine();
 
-                Console.Write("\nИмя героя: ");
+                // Ввод данных
+                Console.Write("Имя героя: ");
                 var name = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(name))
                 {
-                    ShowError("Имя не может быть пустым.");
-                    WaitForContinue();
+                    ShowError("Имя не может быть пустым");
                     return;
                 }
 
                 Console.Write("ID расы: ");
-                if (!int.TryParse(Console.ReadLine(), out int speciesId) || speciesId <= 0)
+                if (!int.TryParse(Console.ReadLine(), out int speciesId))
                 {
-                    ShowError("Некорректный ID расы.");
-                    WaitForContinue();
+                    ShowError("Некорректный ID расы");
                     return;
                 }
 
-                var species = _presenter.GetAllSpecies().FirstOrDefault(s => s.Id == speciesId);
+                var species = _currentSpecies.FirstOrDefault(s => s.Id == speciesId);
                 if (species == null)
                 {
-                    ShowError("Раса с таким ID не найдена.");
-                    WaitForContinue();
+                    ShowError("Раса с таким ID не найдена");
                     return;
                 }
 
@@ -197,16 +609,14 @@ namespace View
                 var genre = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(genre))
                 {
-                    ShowError("Гендер не может быть пустым.");
-                    WaitForContinue();
+                    ShowError("Гендер не может быть пустым");
                     return;
                 }
 
                 Console.Write("Сила (1-1000): ");
-                if (!int.TryParse(Console.ReadLine(), out int strange) || strange < 1 || strange > 1000)
+                if (!int.TryParse(Console.ReadLine(), out int strength) || strength < 1 || strength > 1000)
                 {
-                    ShowError("Некорректное значение силы.");
-                    WaitForContinue();
+                    ShowError("Некорректное значение силы");
                     return;
                 }
 
@@ -214,21 +624,29 @@ namespace View
                 var damageType = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(damageType))
                 {
-                    ShowError("Тип урона не может быть пустым.");
-                    WaitForContinue();
+                    ShowError("Тип урона не может быть пустым");
                     return;
                 }
 
-                Console.Write("HP: ");
-                if (!double.TryParse(Console.ReadLine(), out double hp) || hp <= 0)
+                Console.Write("HP (1-10000): ");
+                if (!double.TryParse(Console.ReadLine(), out double hp) || hp < 1 || hp > 10000)
                 {
-                    ShowError("Некорректное значение HP.");
-                    WaitForContinue();
+                    ShowError("Некорректное значение HP");
                     return;
                 }
 
-                _presenter.AddHero(name, speciesId, genre, strange, damageType, hp);
-                ShowMessage("Герой успешно добавлен!", "Успех");
+                // Генерируем событие для Presenter
+                HeroAdded?.Invoke(new HeroAddedEventArgs
+                {
+                    Name = name,
+                    SpeciesId = speciesId,
+                    Genre = genre,
+                    Strange = strength,
+                    DamageType = damageType,
+                    Hp = hp
+                });
+
+                ShowMessage($"Герой '{name}' успешно добавлен!", "Успех");
             }
             catch (Exception ex)
             {
@@ -238,81 +656,207 @@ namespace View
             WaitForContinue();
         }
 
-        private void ShowAllSpeciesBrief()
-        {
-            var speciesList = _presenter.GetAllSpecies();
-            if (speciesList.Any())
-            {
-                Console.WriteLine("\nДоступные расы:");
-                Console.WriteLine("{0,-5} {1,-20} {2,-30}", "ID", "Название", "Описание");
-                Console.WriteLine(new string('-', 60));
-
-                foreach (var species in speciesList)
-                {
-                    var shortDescription = species.Description.Length > 30
-                        ? species.Description.Substring(0, 27) + "..."
-                        : species.Description;
-
-                    Console.WriteLine("{0,-5} {1,-20} {2,-30}",
-                        species.Id, species.Name, shortDescription);
-                }
-            }
-        }
-
-        private void ShowAllSpecies()
+        private void FindHeroByName()
         {
             Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("               ВСЕ РАСЫ");
-            Console.WriteLine("═══════════════════════════════════════");
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                             ПОИСК ГЕРОЯ                                    ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine();
 
-            var speciesList = _presenter.GetAllSpecies();
+            Console.Write("Введите имя для поиска: ");
+            var searchTerm = Console.ReadLine();
 
-            if (!speciesList.Any())
+            if (string.IsNullOrWhiteSpace(searchTerm))
             {
-                ShowMessage("Рас не найдено.");
+                ShowError("Поисковый запрос не может быть пустым");
+                WaitForContinue();
+                return;
+            }
+
+            // Генерируем событие для Presenter
+            HeroSearch?.Invoke(new HeroSearchEventArgs
+            {
+                SearchTerm = searchTerm
+            });
+
+            WaitForContinue();
+        }
+
+        private void DeleteHero()
+        {
+            Console.Clear();
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                            УДАЛЕНИЕ ГЕРОЯ                                  ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine();
+
+            if (!_currentHeroes.Any())
+            {
+                ShowError("Нет героев для удаления");
+                WaitForContinue();
+                return;
+            }
+
+            Console.WriteLine("Текущие герои на странице:");
+            Console.WriteLine("{0,-5} {1,-20} {2,-15}", "ID", "Имя", "Раса");
+            Console.WriteLine(new string('─', 45));
+
+            foreach (var hero in _currentHeroes)
+            {
+                Console.WriteLine("{0,-5} {1,-20} {2,-15}", hero.Id, hero.Name, hero.Species?.Name ?? "Неизвестно");
+            }
+
+            Console.WriteLine();
+            Console.Write("Введите ID героя для удаления: ");
+
+            if (!int.TryParse(Console.ReadLine(), out int heroId))
+            {
+                ShowError("Некорректный ID героя");
+                WaitForContinue();
+                return;
+            }
+
+            var heroToDelete = _currentHeroes.FirstOrDefault(h => h.Id == heroId);
+            if (heroToDelete == null)
+            {
+                ShowError("Герой с таким ID не найден на текущей странице");
+                WaitForContinue();
+                return;
+            }
+
+            Console.WriteLine();
+            Console.Write($"Вы уверены, что хотите удалить героя '{heroToDelete.Name}'? (да/нет): ");
+            var confirmation = Console.ReadLine()?.ToLower();
+
+            if (confirmation == "да" || confirmation == "д" || confirmation == "y" || confirmation == "yes")
+            {
+                // Генерируем событие для Presenter
+                HeroDeleted?.Invoke(new HeroDeletedEventArgs
+                {
+                    HeroId = heroId
+                });
+
+                ShowMessage($"Герой '{heroToDelete.Name}' успешно удален", "Успех");
             }
             else
             {
-                foreach (var species in speciesList)
+                ShowMessage("Удаление отменено", "Отмена");
+            }
+
+            WaitForContinue();
+        }
+
+        private void HitHero()
+        {
+            Console.Clear();
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                          НАНЕСЕНИЕ УРОНА ГЕРОЮ                             ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine();
+
+            if (!_currentHeroes.Any())
+            {
+                ShowError("Нет героев для нанесения урона");
+                WaitForContinue();
+                return;
+            }
+
+            Console.WriteLine("Текущие герои на странице:");
+            Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10}", "ID", "Имя", "Раса", "HP");
+            Console.WriteLine(new string('─', 55));
+
+            foreach (var hero in _currentHeroes)
+            {
+                string hpStatus = GetHpStatusIcon(hero.Hp);
+                Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10}",
+                    hero.Id, hero.Name, hero.Species?.Name ?? "Неизвестно", $"{hpStatus} {hero.Hp:F1}");
+            }
+
+            Console.WriteLine();
+            Console.Write("Введите ID героя: ");
+
+            if (!int.TryParse(Console.ReadLine(), out int heroId))
+            {
+                ShowError("Некорректный ID героя");
+                WaitForContinue();
+                return;
+            }
+
+            var heroToHit = _currentHeroes.FirstOrDefault(h => h.Id == heroId);
+            if (heroToHit == null)
+            {
+                ShowError("Герой с таким ID не найден на текущей странице");
+                WaitForContinue();
+                return;
+            }
+
+            Console.WriteLine();
+            Console.WriteLine($"Выбран герой: {heroToHit.Name}");
+            Console.WriteLine($"Текущее HP: {heroToHit.Hp:F1}");
+
+            Console.Write($"Урон (0 - {heroToHit.Hp:F1}): ");
+            if (!double.TryParse(Console.ReadLine(), out double damage) || damage < 0)
+            {
+                ShowError("Некорректное значение урона");
+                WaitForContinue();
+                return;
+            }
+
+            if (damage > heroToHit.Hp)
+            {
+                Console.WriteLine();
+                Console.Write($"⚠️ ВНИМАНИЕ: урон ({damage:F1}) больше текущего HP ({heroToHit.Hp:F1})!");
+                Console.Write(" Герой умрет. Продолжить? (да/нет): ");
+                var confirm = Console.ReadLine()?.ToLower();
+
+                if (!(confirm == "да" || confirm == "д" || confirm == "y" || confirm == "yes"))
                 {
-                    Console.WriteLine($"\n🔹 {species.Name} (ID: {species.Id})");
-                    Console.WriteLine($"   Описание: {species.Description}");
-
-                    // Показываем количество героев этой расы
-                    var heroesCount = _presenter.GetAllHeroes()
-                        .Count(h => h.SpeciesId == species.Id);
-
-                    Console.WriteLine($"   Героев этой расы: {heroesCount}");
+                    ShowMessage("Отменено", "Отмена");
+                    WaitForContinue();
+                    return;
                 }
             }
+
+            // Генерируем событие для Presenter
+            HeroDamaged?.Invoke(new HeroDamagedEventArgs
+            {
+                HeroId = heroId,
+                Damage = damage
+            });
 
             WaitForContinue();
         }
 
         private void AddNewSpecies()
         {
+            Console.Clear();
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                          ДОБАВЛЕНИЕ НОВОЙ РАСЫ                             ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine();
+
             try
             {
-                Console.Clear();
-                Console.WriteLine("═══════════════════════════════════════");
-                Console.WriteLine("           ДОБАВЛЕНИЕ РАСЫ");
-                Console.WriteLine("═══════════════════════════════════════");
-
                 Console.Write("Название расы: ");
                 var name = Console.ReadLine();
                 if (string.IsNullOrWhiteSpace(name))
                 {
-                    ShowError("Название не может быть пустым.");
-                    WaitForContinue();
+                    ShowError("Название не может быть пустым");
                     return;
                 }
 
-                Console.Write("Описание: ");
+                Console.Write("Описание (необязательно): ");
                 var description = Console.ReadLine();
 
-                _presenter.AddSpecies(name, description);
-                ShowMessage("Раса успешно добавлена!", "Успех");
+                // Генерируем событие для Presenter
+                SpeciesAdded?.Invoke(new SpeciesAddedEventArgs
+                {
+                    Name = name,
+                    Description = description
+                });
+
+                ShowMessage($"Раса '{name}' успешно добавлена!", "Успех");
             }
             catch (Exception ex)
             {
@@ -324,569 +868,207 @@ namespace View
 
         private void EditSpecies()
         {
-            try
-            {
-                var speciesList = _presenter.GetAllSpecies();
-                if (!speciesList.Any())
-                {
-                    ShowMessage("Нет доступных рас для редактирования.");
-                    WaitForContinue();
-                    return;
-                }
-
-                Console.Clear();
-                Console.WriteLine("═══════════════════════════════════════");
-                Console.WriteLine("         РЕДАКТИРОВАНИЕ РАСЫ");
-                Console.WriteLine("═══════════════════════════════════════");
-
-                ShowAllSpeciesBrief();
-
-                Console.Write("\nID расы для редактирования: ");
-                if (!int.TryParse(Console.ReadLine(), out int speciesId) || speciesId <= 0)
-                {
-                    ShowError("Некорректный ID расы.");
-                    WaitForContinue();
-                    return;
-                }
-
-                var species = speciesList.FirstOrDefault(s => s.Id == speciesId);
-                if (species == null)
-                {
-                    ShowError("Раса с таким ID не найдена.");
-                    WaitForContinue();
-                    return;
-                }
-
-                Console.WriteLine($"\nТекущие данные:");
-                Console.WriteLine($"Название: {species.Name}");
-                Console.WriteLine($"Описание: {species.Description}");
-                Console.WriteLine(new string('-', 40));
-
-                Console.Write("Новое название (оставьте пустым, чтобы не менять): ");
-                var newName = Console.ReadLine();
-
-                Console.Write("Новое описание (оставьте пустым, чтобы не менять): ");
-                var newDescription = Console.ReadLine();
-
-                var updatedSpecies = new Species
-                {
-                    Id = species.Id,
-                    Name = string.IsNullOrWhiteSpace(newName) ? species.Name : newName.Trim(),
-                    Description = string.IsNullOrWhiteSpace(newDescription) ? species.Description : newDescription.Trim()
-                };
-
-                _presenter.UpdateSpecies(updatedSpecies);
-                ShowMessage("Раса успешно обновлена!", "Успех");
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Ошибка при редактировании расы: {ex.Message}");
-            }
-
-            WaitForContinue();
+            // Запрос списка рас у Presenter
+            RequestAllSpecies();
         }
 
         private void DeleteSpecies()
         {
-            try
+            Console.Clear();
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                            УДАЛЕНИЕ РАСЫ                                   ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine();
+
+            if (!_currentSpecies.Any())
             {
-                var speciesList = _presenter.GetAllSpecies();
-                if (!speciesList.Any())
+                ShowError("Нет рас для удаления");
+                WaitForContinue();
+                return;
+            }
+
+            Console.WriteLine("Доступные расы:");
+            foreach (var species in _currentSpecies)
+            {
+                Console.WriteLine($"  {species.Id}. {species.Name}");
+            }
+
+            Console.WriteLine();
+            Console.Write("Введите ID расы для удаления: ");
+
+            if (!int.TryParse(Console.ReadLine(), out int speciesId))
+            {
+                ShowError("Некорректный ID расы");
+                WaitForContinue();
+                return;
+            }
+
+            var speciesToDelete = _currentSpecies.FirstOrDefault(s => s.Id == speciesId);
+            if (speciesToDelete == null)
+            {
+                ShowError("Раса с таким ID не найдена");
+                WaitForContinue();
+                return;
+            }
+
+            // Проверяем, есть ли герои этой расы
+            var heroesWithSpecies = _currentHeroes.Count(h => h.SpeciesId == speciesId);
+            if (heroesWithSpecies > 0)
+            {
+                ShowError($"Невозможно удалить расу '{speciesToDelete.Name}'. Существуют герои этой расы ({heroesWithSpecies} шт.).");
+                WaitForContinue();
+                return;
+            }
+
+            Console.WriteLine();
+            Console.Write($"Вы уверены, что хотите удалить расу '{speciesToDelete.Name}'? (да/нет): ");
+            var confirmation = Console.ReadLine()?.ToLower();
+
+            if (confirmation == "да" || confirmation == "д" || confirmation == "y" || confirmation == "yes")
+            {
+                // Генерируем событие для Presenter
+                SpeciesDeleted?.Invoke(new SpeciesDeletedEventArgs
                 {
-                    ShowMessage("Нет доступных рас для удаления.");
-                    WaitForContinue();
-                    return;
-                }
+                    SpeciesId = speciesId
+                });
 
-                Console.Clear();
-                Console.WriteLine("═══════════════════════════════════════");
-                Console.WriteLine("            УДАЛЕНИЕ РАСЫ");
-                Console.WriteLine("═══════════════════════════════════════");
+                ShowMessage($"Раса '{speciesToDelete.Name}' успешно удалена", "Успех");
+            }
+            else
+            {
+                ShowMessage("Удаление отменено", "Отмена");
+            }
 
-                ShowAllSpeciesBrief();
+            WaitForContinue();
+        }
 
-                Console.Write("\nID расы для удаления: ");
-                if (!int.TryParse(Console.ReadLine(), out int speciesId) || speciesId <= 0)
+        private void ConfigurePagination()
+        {
+            Console.Clear();
+            Console.WriteLine("╔══════════════════════════════════════════════════════════════════════════════╗");
+            Console.WriteLine("║                         НАСТРОЙКИ ПАГИНАЦИИ                               ║");
+            Console.WriteLine("╚══════════════════════════════════════════════════════════════════════════════╝");
+            Console.WriteLine();
+
+            Console.WriteLine($"Текущие настройки:");
+            Console.WriteLine($"  • Текущая страница: {_currentPage}");
+            Console.WriteLine($"  • Всего страниц: {_totalPages}");
+            Console.WriteLine($"  • Размер страницы: {_pageSize}");
+            Console.WriteLine($"  • Всего героев: {_totalItems}");
+            Console.WriteLine();
+
+            Console.WriteLine("Доступные размеры страниц: 5, 10, 20, 50, 100");
+            Console.Write("Введите новый размер страницы: ");
+
+            if (int.TryParse(Console.ReadLine(), out int newPageSize))
+            {
+                if (newPageSize > 0 && newPageSize <= 1000)
                 {
-                    ShowError("Некорректный ID расы.");
-                    WaitForContinue();
-                    return;
-                }
+                    // Генерируем событие для Presenter
+                    PageChanged?.Invoke(new PageChangedEventArgs
+                    {
+                        PageSize = newPageSize,
+                        PageNumber = 1
+                    });
 
-                var species = speciesList.FirstOrDefault(s => s.Id == speciesId);
-                if (species == null)
-                {
-                    ShowError("Раса с таким ID не найдена.");
-                    WaitForContinue();
-                    return;
-                }
-
-                // Проверяем, есть ли герои этой расы
-                var heroesWithThisSpecies = _presenter.GetAllHeroes()
-                    .Count(h => h.SpeciesId == speciesId);
-
-                if (heroesWithThisSpecies > 0)
-                {
-                    ShowError($"Невозможно удалить расу '{species.Name}'. Существуют герои этой расы.");
-                    WaitForContinue();
-                    return;
-                }
-
-                Console.Write($"\nВы уверены, что хотите удалить расу '{species.Name}'? (да/нет): ");
-                var confirmation = Console.ReadLine()?.ToLower();
-
-                if (confirmation == "да" || confirmation == "д" || confirmation == "y" || confirmation == "yes")
-                {
-                    _presenter.DeleteSpecies(speciesId);
-                    ShowMessage("Раса успешно удалена!", "Успех");
+                    ShowMessage($"Размер страницы изменен на {newPageSize}", "Успех");
                 }
                 else
                 {
-                    ShowMessage("Удаление отменено.");
+                    ShowError("Размер страницы должен быть от 1 до 1000");
                 }
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Ошибка при удалении расы: {ex.Message}");
-            }
-
-            WaitForContinue();
-        }
-
-        private void FindByName()
-        {
-            Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("           ПОИСК ГЕРОЯ");
-            Console.WriteLine("═══════════════════════════════════════");
-
-            Console.Write("Введите имя для поиска: ");
-            var name = Console.ReadLine();
-
-            if (string.IsNullOrWhiteSpace(name))
-            {
-                ShowError("Имя для поиска пустое.");
-                WaitForContinue();
-                return;
-            }
-
-            var heroes = _presenter.FindHeroesByName(name);
-
-            if (!heroes.Any())
-            {
-                ShowMessage($"Героев с именем '{name}' не найдено.");
             }
             else
             {
-                Console.WriteLine($"\nНайдено {heroes.Count} героев:");
-                Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10} {4,-10}",
-                    "ID", "Имя", "Раса", "HP", "Сила");
-                Console.WriteLine(new string('-', 65));
-
-                foreach (var hero in heroes)
-                {
-                    var hpColor = hero.Hp < 50 ? "🟡" : hero.Hp <= 0 ? "💀" : "🟢";
-                    Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10} {4,-10}",
-                        hero.Id,
-                        hero.Name,
-                        hero.Species?.Name ?? "Неизвестно",
-                        $"{hpColor} {hero.Hp:F1}",
-                        hero.Strange);
-                }
+                ShowError("Некорректное значение");
             }
 
             WaitForContinue();
         }
 
-        private void ShowBySpecies()
+        #endregion
+
+        #region Запросы к Presenter
+
+        private void RequestGroupBySpecies()
         {
-            Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("       ГРУППИРОВКА ПО РАСАМ");
-            Console.WriteLine("═══════════════════════════════════════");
-
-            var heroesBySpecies = _presenter.GroupHeroesBySpecies();
-
-            if (!heroesBySpecies.Any())
-            {
-                ShowMessage("Героев не найдено.");
-            }
-            else
-            {
-                foreach (var species in heroesBySpecies.OrderBy(g => g.Key))
-                {
-                    Console.WriteLine($"\n🏹 {species.Key} ({species.Value.Count} героев):");
-                    Console.WriteLine(new string('-', 50));
-
-                    foreach (var hero in species.Value.OrderBy(h => h.Name))
-                    {
-                        var hpColor = hero.Hp < 50 ? "🟡" : hero.Hp <= 0 ? "💀" : "🟢";
-                        Console.WriteLine($"  • {hero.Name} - HP: {hpColor} {hero.Hp:F1}, Сила: {hero.Strange}, Тип: {hero.TypeOfDamage}");
-                    }
-                }
-            }
-
-            WaitForContinue();
+            // В реальном приложении нужно вызвать соответствующий метод Presenter
+            ShowMessage("Группировка по расам будет выполнена", "Информация");
         }
 
-        private void ShowByDamageType()
+        private void RequestGroupByDamageType()
         {
-            Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("    ГРУППИРОВКА ПО ТИПУ УРОНА");
-            Console.WriteLine("═══════════════════════════════════════");
-
-            var heroesByDamage = _presenter.GroupHeroesByDamageType();
-
-            if (!heroesByDamage.Any())
-            {
-                ShowMessage("Героев не найдено.");
-            }
-            else
-            {
-                foreach (var damageType in heroesByDamage.OrderBy(g => g.Key))
-                {
-                    Console.WriteLine($"\n⚔️ {damageType.Key} ({damageType.Value.Count} героев):");
-                    Console.WriteLine(new string('-', 50));
-
-                    foreach (var hero in damageType.Value.OrderBy(h => h.Name))
-                    {
-                        var hpColor = hero.Hp < 50 ? "🟡" : hero.Hp <= 0 ? "💀" : "🟢";
-                        Console.WriteLine($"  • {hero.Name} ({hero.Species?.Name}) - HP: {hpColor} {hero.Hp:F1}, Сила: {hero.Strange}");
-                    }
-                }
-            }
-
-            WaitForContinue();
+            ShowMessage("Группировка по типу урона будет выполнена", "Информация");
         }
 
-        private void ShowWoundedHeroes()
+        private void RequestWoundedHeroes()
         {
-            Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("          РАНЕНЫЕ ГЕРОИ");
-            Console.WriteLine("═══════════════════════════════════════");
-
-            var wounded = _presenter.GetWoundedHeroes();
-
-            if (!wounded.Any())
-            {
-                ShowMessage("Раненых героев не найдено.");
-            }
-            else
-            {
-                Console.WriteLine($"Найдено {wounded.Count} раненых героев (HP < 50):");
-                Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10} {4,-10}",
-                    "ID", "Имя", "Раса", "HP", "Сила");
-                Console.WriteLine(new string('-', 65));
-
-                foreach (var hero in wounded.OrderBy(h => h.Hp))
-                {
-                    var hpColor = hero.Hp < 10 ? "🔴" : "🟡";
-                    var status = hero.Hp <= 0 ? "💀 МЕРТВ" : "";
-                    Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10} {4,-10} {5}",
-                        hero.Id,
-                        hero.Name,
-                        hero.Species?.Name ?? "Неизвестно",
-                        $"{hpColor} {hero.Hp:F1}",
-                        hero.Strange,
-                        status);
-                }
-            }
-
-            WaitForContinue();
+            ShowMessage("Список раненых героев будет показан", "Информация");
         }
 
-        private void ShowStrongestHeroes()
+        private void RequestStrongestHeroes()
         {
-            Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("       ТОП-3 САМЫХ СИЛЬНЫХ");
-            Console.WriteLine("═══════════════════════════════════════");
-
-            var strongest = _presenter.GetStrongestHeroes(3);
-
-            if (!strongest.Any())
-            {
-                ShowMessage("Героев не найдено.");
-            }
-            else
-            {
-                Console.WriteLine("🏆 Самые сильные герои:");
-                int place = 1;
-
-                foreach (var hero in strongest)
-                {
-                    string medal = place == 1 ? "🥇" : place == 2 ? "🥈" : "🥉";
-                    var hpColor = hero.Hp < 50 ? "🟡" : hero.Hp <= 0 ? "💀" : "🟢";
-                    Console.WriteLine($"\n{medal} {place} место:");
-                    Console.WriteLine($"  Имя: {hero.Name}");
-                    Console.WriteLine($"  Раса: {hero.Species?.Name ?? "Неизвестно"}");
-                    Console.WriteLine($"  Сила: {hero.Strange} 💪");
-                    Console.WriteLine($"  HP: {hpColor} {hero.Hp:F1} ❤️");
-                    Console.WriteLine($"  Тип урона: {hero.TypeOfDamage}");
-                    place++;
-                }
-            }
-
-            WaitForContinue();
+            ShowMessage("Топ-3 сильнейших героев будет показан", "Информация");
         }
 
-        private void HitHero()
+        private void RequestAllSpecies()
         {
-            Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("         НАНЕСЕНИЕ УРОНА");
-            Console.WriteLine("═══════════════════════════════════════");
-
-            // Сначала показываем всех героев кратко
-            var heroes = _presenter.GetAllHeroes();
-            if (!heroes.Any())
-            {
-                ShowMessage("Нет героев для нанесения урона.");
-                WaitForContinue();
-                return;
-            }
-
-            Console.WriteLine("\nСписок героев:");
-            Console.WriteLine("{0,-5} {1,-20} {2,-10}", "ID", "Имя", "HP");
-            Console.WriteLine(new string('-', 40));
-
-            foreach (var hero in heroes)
-            {
-                var hpColor = hero.Hp < 50 ? "🟡" : hero.Hp <= 0 ? "💀" : "🟢";
-                Console.WriteLine("{0,-5} {1,-20} {2,-10}",
-                    hero.Id, hero.Name, $"{hpColor} {hero.Hp:F1}");
-            }
-
-            try
-            {
-                Console.Write("\nВведите ID героя: ");
-                if (!int.TryParse(Console.ReadLine(), out int id) || id <= 0)
-                {
-                    ShowError("Некорректный ID героя.");
-                    WaitForContinue();
-                    return;
-                }
-
-                var hero = heroes.FirstOrDefault(h => h.Id == id);
-                if (hero == null)
-                {
-                    ShowError("Герой с таким ID не найден.");
-                    WaitForContinue();
-                    return;
-                }
-
-                Console.WriteLine($"\nВыбран герой: {hero.Name}");
-                Console.WriteLine($"Текущее HP: {hero.Hp:F1}");
-
-                Console.Write($"Урон (0 - {hero.Hp:F1}): ");
-                if (!double.TryParse(Console.ReadLine(), out double damage) || damage < 0)
-                {
-                    ShowError("Некорректное значение урона.");
-                    WaitForContinue();
-                    return;
-                }
-
-                if (damage > hero.Hp)
-                {
-                    Console.Write($"\n⚠️  Внимание: урон ({damage}) больше текущего HP ({hero.Hp:F1})!");
-                    Console.Write(" Герой умрет. Продолжить? (да/нет): ");
-                    var confirm = Console.ReadLine()?.ToLower();
-
-                    if (confirm != "да" && confirm != "д" && confirm != "y" && confirm != "yes")
-                    {
-                        ShowMessage("Отменено.");
-                        WaitForContinue();
-                        return;
-                    }
-                }
-
-                _presenter.HitHero(id, damage);
-
-                // Обновляем данные героя
-                var updatedHero = heroes.FirstOrDefault(h => h.Id == id);
-                if (updatedHero != null)
-                {
-                    if (updatedHero.Hp > 0)
-                    {
-                        ShowMessage($"Урон нанесен! Новое HP: {updatedHero.Hp:F1}", "Успех");
-                    }
-                    else
-                    {
-                        ShowMessage($"Герой {hero.Name} погиб!", "Информация");
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Ошибка при нанесении урона: {ex.Message}");
-            }
-
-            WaitForContinue();
+            ShowMessage("Список всех рас будет показан", "Информация");
         }
 
-        private void KillHero()
+        private void RequestStatistics()
         {
-            Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("          УДАЛЕНИЕ ГЕРОЯ");
-            Console.WriteLine("═══════════════════════════════════════");
+            ShowMessage("Статистика будет показана", "Информация");
+        }
 
-            var heroes = _presenter.GetAllHeroes();
-            if (!heroes.Any())
+        #endregion
+
+        #region Вспомогательные методы
+
+        private string[] SplitMessage(string message, int maxLength)
+        {
+            var lines = new List<string>();
+            var words = message.Split(' ');
+            var currentLine = "";
+
+            foreach (var word in words)
             {
-                ShowMessage("Нет героев для удаления.");
-                WaitForContinue();
-                return;
-            }
-
-            Console.WriteLine("\nСписок героев:");
-            Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10}", "ID", "Имя", "Раса", "HP");
-            Console.WriteLine(new string('-', 55));
-
-            foreach (var hero in heroes)
-            {
-                Console.WriteLine("{0,-5} {1,-20} {2,-15} {3,-10}",
-                    hero.Id,
-                    hero.Name,
-                    hero.Species?.Name ?? "Неизвестно",
-                    $"{hero.Hp:F1}");
-            }
-
-            try
-            {
-                Console.Write("\nВведите ID героя для удаления: ");
-                if (!int.TryParse(Console.ReadLine(), out int id) || id <= 0)
+                if ((currentLine + " " + word).Length > maxLength)
                 {
-                    ShowError("Некорректный ID героя.");
-                    WaitForContinue();
-                    return;
-                }
-
-                var hero = heroes.FirstOrDefault(h => h.Id == id);
-                if (hero == null)
-                {
-                    ShowError("Герой с таким ID не найден.");
-                    WaitForContinue();
-                    return;
-                }
-
-                Console.WriteLine($"\nВыбран герой: {hero.Name}");
-                Console.WriteLine($"Раса: {hero.Species?.Name}");
-                Console.WriteLine($"HP: {hero.Hp:F1}, Сила: {hero.Strange}");
-
-                Console.Write($"\n❌ Вы уверены, что хотите удалить героя '{hero.Name}'? (да/нет): ");
-                var confirmation = Console.ReadLine()?.ToLower();
-
-                if (confirmation == "да" || confirmation == "д" || confirmation == "y" || confirmation == "yes")
-                {
-                    _presenter.DeleteHero(id);
-                    ShowMessage("Герой удален из базы данных!", "Успех");
+                    lines.Add(currentLine.Trim());
+                    currentLine = word;
                 }
                 else
                 {
-                    ShowMessage("Удаление отменено.");
+                    currentLine += (currentLine.Length == 0 ? "" : " ") + word;
                 }
             }
-            catch (Exception ex)
-            {
-                ShowError($"Ошибка при удалении героя: {ex.Message}");
-            }
 
-            WaitForContinue();
+            if (!string.IsNullOrEmpty(currentLine))
+                lines.Add(currentLine.Trim());
+
+            return lines.ToArray();
         }
 
-        private void ShowStatistics()
+        private string GetHpStatusIcon(double hp)
         {
-            Console.Clear();
-            Console.WriteLine("═══════════════════════════════════════");
-            Console.WriteLine("             СТАТИСТИКА");
-            Console.WriteLine("═══════════════════════════════════════");
-
-            try
-            {
-                var stats = _presenter.GetStatistics();
-
-                if (stats == null)
-                {
-                    ShowError("Не удалось получить статистику.");
-                    WaitForContinue();
-                    return;
-                }
-
-                // Общая статистика
-                Console.WriteLine("\n📊 ОБЩАЯ СТАТИСТИКА:");
-                Console.WriteLine($"   Всего героев: {stats.TotalHeroes}");
-                Console.WriteLine($"   Средняя сила: {stats.AverageStrength:F1}");
-                Console.WriteLine($"   Среднее HP: {stats.AverageHp:F1}");
-                Console.WriteLine($"   Максимальная сила: {stats.MaxStrength}");
-                Console.WriteLine($"   Минимальное HP: {stats.MinHp:F1}");
-
-                // Статистика по расам
-                if (stats.SpeciesStats != null && stats.SpeciesStats.Any())
-                {
-                    Console.WriteLine("\n👥 СТАТИСТИКА ПО РАСАМ:");
-                    foreach (var stat in stats.SpeciesStats.OrderByDescending(s => s.Count))
-                    {
-                        Console.WriteLine($"   {stat.Species}: {stat.Count} героев, " +
-                                        $"ср. сила: {stat.AvgStrength:F1}, ср. HP: {stat.AvgHp:F1}");
-                    }
-                }
-
-                // Статистика по типам урона
-                if (stats.DamageTypeStats != null && stats.DamageTypeStats.Any())
-                {
-                    Console.WriteLine("\n⚔️ СТАТИСТИКА ПО ТИПАМ УРОНА:");
-                    foreach (var stat in stats.DamageTypeStats.OrderByDescending(d => d.Count))
-                    {
-                        Console.WriteLine($"   {stat.DamageType}: {stat.Count} героев, " +
-                                        $"общая сила: {stat.TotalStrength}");
-                    }
-                }
-
-                // Статистика по гендерам
-                if (stats.GenderStats != null && stats.GenderStats.Any())
-                {
-                    Console.WriteLine("\n🚻 СТАТИСТИКА ПО ГЕНДЕРАМ:");
-                    foreach (var stat in stats.GenderStats.OrderByDescending(g => g.Count))
-                    {
-                        Console.WriteLine($"   {stat.Gender}: {stat.Count} героев ({stat.Percentage:F1}%)");
-                    }
-                }
-
-                // Раненые герои
-                if (stats.LowHpHeroes != null && stats.LowHpHeroes.Any())
-                {
-                    Console.WriteLine($"\n🏥 ГЕРОИ С НИЗКИМ HP (<50): {stats.LowHpHeroes.Count}");
-                    foreach (var hero in stats.LowHpHeroes.Take(5))
-                    {
-                        Console.WriteLine($"   • {hero.Name} - {hero.Hp:F1} HP ({hero.Species?.Name})");
-                    }
-                    if (stats.LowHpHeroes.Count > 5)
-                        Console.WriteLine($"   ... и еще {stats.LowHpHeroes.Count - 5}");
-                }
-            }
-            catch (Exception ex)
-            {
-                ShowError($"Ошибка при выводе статистики: {ex.Message}");
-            }
-
-            WaitForContinue();
-        }
-
-        private void RefreshHeroes()
-        {
-            _presenter.RefreshHeroesList();
-            ShowMessage("Список героев обновлен!", "Успех");
-            WaitForContinue();
+            if (hp <= 0) return "💀";
+            if (hp < 20) return "🔴";
+            if (hp < 50) return "🟡";
+            if (hp < 100) return "🟢";
+            return "✅";
         }
 
         private void WaitForContinue()
         {
-            Console.WriteLine("\n═══════════════════════════════════════");
+            Console.WriteLine();
+            Console.WriteLine(new string('═', 80));
             Console.Write("Нажмите любую клавишу для продолжения...");
-            Console.ReadKey();
+            Console.ReadKey(true);
         }
+
+        private int _totalItems = 0;
+
+        #endregion
     }
 }

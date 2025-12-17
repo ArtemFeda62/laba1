@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
+﻿// View/AddSpeciesForm.cs
+using System;
 using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace View
@@ -20,7 +15,6 @@ namespace View
 
         public AddSpeciesForm()
         {
-            InitializeComponent();
             InitializeForm();
         }
 
@@ -37,12 +31,26 @@ namespace View
             int controlWidth = 230;
 
             // Название расы
-            var lblName = new Label { Text = "Название расы:", Location = new Point(10, y), Width = labelWidth };
-            txtName = new TextBox { Location = new Point(140, y - 3), Width = controlWidth };
+            var lblName = new Label
+            {
+                Text = "Название расы:",
+                Location = new Point(10, y),
+                Width = labelWidth
+            };
+            txtName = new TextBox
+            {
+                Location = new Point(140, y - 3),
+                Width = controlWidth
+            };
             y += 35;
 
             // Описание
-            var lblDescription = new Label { Text = "Описание:", Location = new Point(10, y), Width = labelWidth };
+            var lblDescription = new Label
+            {
+                Text = "Описание:",
+                Location = new Point(10, y),
+                Width = labelWidth
+            };
             txtDescription = new TextBox
             {
                 Location = new Point(140, y - 3),
@@ -58,19 +66,21 @@ namespace View
             {
                 Text = "Добавить",
                 Location = new Point(100, y),
-                Width = 80,
-                DialogResult = DialogResult.OK
+                Width = 80
             };
             btnCancel = new Button
             {
                 Text = "Отмена",
                 Location = new Point(190, y),
-                Width = 80,
-                DialogResult = DialogResult.Cancel
+                Width = 80
             };
 
             btnOk.Click += BtnOk_Click;
-            btnCancel.Click += (s, e) => this.Close();
+            btnCancel.Click += (s, e) =>
+            {
+                this.DialogResult = DialogResult.Cancel;
+                this.Close();
+            };
 
             this.Controls.AddRange(new Control[] {
                 lblName, txtName,
@@ -86,7 +96,8 @@ namespace View
         {
             if (string.IsNullOrWhiteSpace(txtName.Text))
             {
-                MessageBox.Show("Введите название расы", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("Введите название расы", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
                 txtName.Focus();
                 return;
             }

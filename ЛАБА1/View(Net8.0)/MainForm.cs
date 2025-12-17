@@ -1,15 +1,12 @@
-﻿using Presenter;
+﻿// View/MainForm.cs
+using Presenter;
 using Shared;
 using Shared.Domain;
-using Shared.Interfases;
+using Shared.Interfaces;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace View
@@ -20,26 +17,52 @@ namespace View
         private DataGridView dataGridView1;
         private StatusStrip statusStrip1;
         private ToolStripStatusLabel statusLabel;
+        private MenuStrip menuStrip1;
+        private ToolStrip toolStrip1;
         private Panel paginationPanel;
         private Label lblPageInfo;
         private ComboBox cmbPageSize;
         private Button btnFirst, btnPrev, btnNext, btnLast;
+        private TextBox txtSearch;
+
+        // Реализация событий интерфейса IView
+        public event Action<HeroAddedEventArgs> HeroAdded;
+        public event Action<HeroDeletedEventArgs> HeroDeleted;
+        public event Action<HeroDamagedEventArgs> HeroDamaged;
+        public event Action<HeroSearchEventArgs> HeroSearch;
+        public event Action<PageChangedEventArgs> PageChanged;
+        public event Action RefreshRequested;
+        public event Action<SpeciesAddedEventArgs> SpeciesAdded;
+        public event Action<SpeciesDeletedEventArgs> SpeciesDeleted;
+        public event Action<SpeciesUpdatedEventArgs> SpeciesUpdated;
 
         public MainForm()
         {
-            InitializeComponent();
-            InitializeForm(); 
+            InitializeForm();
+            InitializeMenu();
+            InitializeToolbar();
+            InitializePagination();
+            InitializeSearchBox();
+
+            // Создаем презентер и передаем ему себя (View)
             _presenter = new MainPresenter(this);
-            InitializeControls();
-            _presenter.Initialize();
+
+            // Начальная загрузка данных
+            RefreshRequested?.Invoke();
         }
 
         private void InitializeForm()
         {
-            this.Text = "Управление героями";
-            this.Size = new Size(900, 600);
+            this.Text = "Герои - Управление персонажами (MVP Architecture)";
+            this.Size = new Size(1000, 650);
             this.StartPosition = FormStartPosition.CenterScreen;
+            this.FormBorderStyle = FormBorderStyle.FixedSingle;
+            this.MaximizeBox = false;
 
+            // Main Layout Panel
+            var mainPanel = new Panel { Dock = DockStyle.Fill };
+
+            // DataGridView - ВАЖНО: AutoGenerateColumns = false
             dataGridView1 = new DataGridView
             {
                 Dock = DockStyle.Fill,
@@ -47,37 +70,142 @@ namespace View
                 AllowUserToAddRows = false,
                 AllowUserToDeleteRows = false,
                 AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
+                AutoGenerateColumns = false, // ОТКЛЮЧАЕМ автосоздание колонок!
                 SelectionMode = DataGridViewSelectionMode.FullRowSelect,
-                MultiSelect = false
+                MultiSelect = false,
+                BackgroundColor = SystemColors.ControlLightLight,
+                BorderStyle = BorderStyle.Fixed3D,
+                CellBorderStyle = DataGridViewCellBorderStyle.Single,
+                RowHeadersVisible = false
             };
 
-            statusStrip1 = new StatusStrip();
-            statusLabel = new ToolStripStatusLabel();
-            statusStrip1.Items.Add(statusLabel);
+            // Настройка колонок DataGridView
+            ConfigureDataGridViewColumns();
 
-            this.Controls.Add(dataGridView1);
+            mainPanel.Controls.Add(dataGridView1);
+            this.Controls.Add(mainPanel);
+
+            // Status Bar
+            statusStrip1 = new StatusStrip();
+            statusLabel = new ToolStripStatusLabel
+            {
+                Text = "Готово",
+                Spring = true,
+                TextAlign = ContentAlignment.MiddleLeft
+            };
+            statusStrip1.Items.Add(statusLabel);
             this.Controls.Add(statusStrip1);
         }
 
-        private void InitializeControls()
+        private void ConfigureDataGridViewColumns()
         {
-            // Меню
-            var menuStrip = new MenuStrip();
+            dataGridView1.Columns.Clear();
 
+            // Колонка ID
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "colId",
+                HeaderText = "ID",
+                DataPropertyName = "Id", // Связь с полем Id
+                Width = 50,
+                ReadOnly = true
+            });
+
+            // Колонка Имя
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "colName",
+                HeaderText = "Имя героя",
+                DataPropertyName = "Name", // Связь с полем Name
+                Width = 150,
+                ReadOnly = true
+            });
+
+            // Колонка Раса
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "colSpecies",
+                HeaderText = "Раса",
+                DataPropertyName = "SpeciesName", // Связь с Species.Name через SpeciesName
+                Width = 100,
+                ReadOnly = true
+            });
+
+            // Колонка HP
+            var hpColumn = new DataGridViewTextBoxColumn
+            {
+                Name = "colHp",
+                HeaderText = "HP",
+                DataPropertyName = "Hp", // Связь с полем Hp
+                Width = 80,
+                ReadOnly = true
+            };
+            dataGridView1.Columns.Add(hpColumn);
+
+            // Колонка Сила
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "colStrength",
+                HeaderText = "Сила",
+                DataPropertyName = "Strange", // Связь с полем Strange
+                Width = 60,
+                ReadOnly = true
+            });
+
+            // Колонка Гендер
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "colGenre",
+                HeaderText = "Гендер",
+                DataPropertyName = "Genre", // Связь с полем Genre
+                Width = 80,
+                ReadOnly = true
+            });
+
+            // Колонка Тип урона
+            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn
+            {
+                Name = "colDamageType",
+                HeaderText = "Тип урона",
+                DataPropertyName = "TypeOfDamage", // Связь с полем TypeOfDamage
+                Width = 120,
+                ReadOnly = true
+            });
+
+            // Обработчик форматирования ячеек
+            dataGridView1.CellFormatting += DataGridView1_CellFormatting;
+            // Двойной клик по строке
+            dataGridView1.CellDoubleClick += DataGridView1_CellDoubleClick;
+            // Выделение строки
+            dataGridView1.SelectionChanged += DataGridView1_SelectionChanged;
+        }
+
+        private void InitializeMenu()
+        {
+            menuStrip1 = new MenuStrip();
+
+            // Меню Файл
             var fileMenu = new ToolStripMenuItem("Файл");
+
             var exitItem = new ToolStripMenuItem("Выход");
             exitItem.Click += (s, e) => Application.Exit();
+
+            fileMenu.DropDownItems.Add(new ToolStripSeparator());
             fileMenu.DropDownItems.Add(exitItem);
 
+            // Меню Герои
             var heroesMenu = new ToolStripMenuItem("Герои");
-            var addHeroItem = new ToolStripMenuItem("Добавить героя");
-            var deleteHeroItem = new ToolStripMenuItem("Удалить героя");
-            var hitHeroItem = new ToolStripMenuItem("Нанести урон");
-            var refreshItem = new ToolStripMenuItem("Обновить список");
 
+            var addHeroItem = new ToolStripMenuItem("Добавить героя");
             addHeroItem.Click += BtnAddHero_Click;
+
+            var deleteHeroItem = new ToolStripMenuItem("Удалить героя");
             deleteHeroItem.Click += BtnDeleteHero_Click;
+
+            var hitHeroItem = new ToolStripMenuItem("Нанести урон");
             hitHeroItem.Click += BtnHitHero_Click;
+
+            var refreshItem = new ToolStripMenuItem("Обновить список");
             refreshItem.Click += BtnRefresh_Click;
 
             heroesMenu.DropDownItems.Add(addHeroItem);
@@ -86,15 +214,19 @@ namespace View
             heroesMenu.DropDownItems.Add(new ToolStripSeparator());
             heroesMenu.DropDownItems.Add(refreshItem);
 
+            // Меню Расы
             var speciesMenu = new ToolStripMenuItem("Расы");
-            var addSpeciesItem = new ToolStripMenuItem("Добавить расу");
-            var showSpeciesItem = new ToolStripMenuItem("Показать расы");
-            var editSpeciesItem = new ToolStripMenuItem("Редактировать расу");
-            var deleteSpeciesItem = new ToolStripMenuItem("Удалить расу");
 
+            var addSpeciesItem = new ToolStripMenuItem("Добавить расу");
             addSpeciesItem.Click += BtnAddSpecies_Click;
+
+            var showSpeciesItem = new ToolStripMenuItem("Показать все расы");
             showSpeciesItem.Click += BtnShowSpecies_Click;
+
+            var editSpeciesItem = new ToolStripMenuItem("Редактировать расу");
             editSpeciesItem.Click += BtnEditSpecies_Click;
+
+            var deleteSpeciesItem = new ToolStripMenuItem("Удалить расу");
             deleteSpeciesItem.Click += BtnDeleteSpecies_Click;
 
             speciesMenu.DropDownItems.Add(addSpeciesItem);
@@ -103,17 +235,22 @@ namespace View
             speciesMenu.DropDownItems.Add(editSpeciesItem);
             speciesMenu.DropDownItems.Add(deleteSpeciesItem);
 
+            // Меню Вид
             var viewMenu = new ToolStripMenuItem("Вид");
-            var statisticsItem = new ToolStripMenuItem("Статистика");
-            var groupBySpeciesItem = new ToolStripMenuItem("Группировка по расам");
-            var groupByDamageItem = new ToolStripMenuItem("Группировка по типу урона");
-            var showWoundedItem = new ToolStripMenuItem("Раненые герои");
-            var showStrongestItem = new ToolStripMenuItem("Топ-3 сильнейших");
 
+            var statisticsItem = new ToolStripMenuItem("Статистика");
             statisticsItem.Click += BtnStatistics_Click;
+
+            var groupBySpeciesItem = new ToolStripMenuItem("Группировка по расам");
             groupBySpeciesItem.Click += BtnGroupBySpecies_Click;
+
+            var groupByDamageItem = new ToolStripMenuItem("Группировка по типу урона");
             groupByDamageItem.Click += BtnGroupByDamage_Click;
+
+            var showWoundedItem = new ToolStripMenuItem("Раненые герои (HP < 50)");
             showWoundedItem.Click += BtnShowWounded_Click;
+
+            var showStrongestItem = new ToolStripMenuItem("Топ-3 сильнейших");
             showStrongestItem.Click += BtnShowStrongest_Click;
 
             viewMenu.DropDownItems.Add(statisticsItem);
@@ -123,313 +260,278 @@ namespace View
             viewMenu.DropDownItems.Add(showWoundedItem);
             viewMenu.DropDownItems.Add(showStrongestItem);
 
-            menuStrip.Items.Add(fileMenu);
-            menuStrip.Items.Add(heroesMenu);
-            menuStrip.Items.Add(speciesMenu);
-            menuStrip.Items.Add(viewMenu);
+            // Добавляем меню
+            menuStrip1.Items.Add(fileMenu);
+            menuStrip1.Items.Add(heroesMenu);
+            menuStrip1.Items.Add(speciesMenu);
+            menuStrip1.Items.Add(viewMenu);
 
-            this.MainMenuStrip = menuStrip;
-            this.Controls.Add(menuStrip);
+            this.MainMenuStrip = menuStrip1;
+            this.Controls.Add(menuStrip1);
+        }
 
-            // Панель инструментов
-            var toolStrip = new ToolStrip();
-            var btnAdd = new ToolStripButton("Добавить героя");
-            var btnDelete = new ToolStripButton("Удалить");
-            var btnRefresh = new ToolStripButton("Обновить");
-            var btnStats = new ToolStripButton("Статистика");
+        private void InitializeToolbar()
+        {
+            toolStrip1 = new ToolStrip();
+            toolStrip1.Dock = DockStyle.Top;
 
+            // Кнопка Добавить героя
+            var btnAdd = new ToolStripButton("➕ Добавить героя");
             btnAdd.Click += BtnAddHero_Click;
+            toolStrip1.Items.Add(btnAdd);
+
+            // Кнопка Удалить
+            var btnDelete = new ToolStripButton("❌ Удалить");
             btnDelete.Click += BtnDeleteHero_Click;
+            toolStrip1.Items.Add(btnDelete);
+
+            // Кнопка Нанести урон
+            var btnHit = new ToolStripButton("⚔️ Нанести урон");
+            btnHit.Click += BtnHitHero_Click;
+            toolStrip1.Items.Add(btnHit);
+
+            toolStrip1.Items.Add(new ToolStripSeparator());
+
+            // Кнопка Обновить
+            var btnRefresh = new ToolStripButton("🔄 Обновить");
             btnRefresh.Click += BtnRefresh_Click;
+            toolStrip1.Items.Add(btnRefresh);
+
+            toolStrip1.Items.Add(new ToolStripSeparator());
+
+            // Кнопка Статистика
+            var btnStats = new ToolStripButton("📊 Статистика");
             btnStats.Click += BtnStatistics_Click;
+            toolStrip1.Items.Add(btnStats);
 
-            toolStrip.Items.Add(btnAdd);
-            toolStrip.Items.Add(btnDelete);
-            toolStrip.Items.Add(new ToolStripSeparator());
-            toolStrip.Items.Add(btnRefresh);
-            toolStrip.Items.Add(new ToolStripSeparator());
-            toolStrip.Items.Add(btnStats);
-
-            this.Controls.Add(toolStrip);
-
-            // Панель пагинации
-            InitializePaginationPanel();
-
-            // Настройка DataGridView
-            ConfigureDataGridView();
+            this.Controls.Add(toolStrip1);
         }
 
-        private void ConfigureDataGridView()
-        {
-            dataGridView1.Columns.Clear();
-            dataGridView1.AutoGenerateColumns = false;
-
-            // Настройка колонок
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                Name = "Id",
-                DataPropertyName = "Id",
-                HeaderText = "ID",
-                Width = 50,
-                ReadOnly = true
-            });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                Name = "Name",
-                DataPropertyName = "Name",
-                HeaderText = "Имя героя",
-                Width = 150,
-                ReadOnly = true
-            });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                Name = "SpeciesName",
-                DataPropertyName = "SpeciesName",
-                HeaderText = "Раса",
-                Width = 100,
-                ReadOnly = true
-            });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                Name = "Hp",
-                DataPropertyName = "Hp",
-                HeaderText = "HP",
-                Width = 80,
-                ReadOnly = true,
-                DefaultCellStyle = new DataGridViewCellStyle() { Format = "F1" }
-            });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                Name = "Strange",
-                DataPropertyName = "Strange",
-                HeaderText = "Сила",
-                Width = 60,
-                ReadOnly = true
-            });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                Name = "Genre",
-                DataPropertyName = "Genre",
-                HeaderText = "Гендер",
-                Width = 80,
-                ReadOnly = true
-            });
-
-            dataGridView1.Columns.Add(new DataGridViewTextBoxColumn()
-            {
-                Name = "TypeOfDamage",
-                DataPropertyName = "TypeOfDamage",
-                HeaderText = "Тип урона",
-                Width = 150,
-                ReadOnly = true
-            });
-
-            // Стиль для строк с низким HP
-            dataGridView1.CellFormatting += DataGridView1_CellFormatting;
-        }
-
-        private void DataGridView1_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
-        {
-            if (e.RowIndex >= 0 && dataGridView1.Rows[e.RowIndex].DataBoundItem != null)
-            {
-                var row = dataGridView1.Rows[e.RowIndex];
-                var heroData = row.DataBoundItem as dynamic;
-
-                if (heroData != null && heroData.Hp < 50)
-                {
-                    row.DefaultCellStyle.BackColor = Color.LightPink;
-                    row.DefaultCellStyle.ForeColor = Color.DarkRed;
-                }
-                else if (heroData != null && heroData.Hp <= 0)
-                {
-                    row.DefaultCellStyle.BackColor = Color.Gray;
-                    row.DefaultCellStyle.ForeColor = Color.White;
-                }
-            }
-        }
-
-        private void InitializePaginationPanel()
+        private void InitializePagination()
         {
             paginationPanel = new Panel
             {
                 Dock = DockStyle.Bottom,
                 Height = 40,
-                BackColor = SystemColors.Control
+                BackColor = Color.LightGray
             };
 
+            int x = 10;
+
+            // Метка "На странице"
             var lblPageSize = new Label
             {
                 Text = "На странице:",
-                Location = new Point(10, 10),
+                Location = new Point(x, 10),
                 AutoSize = true
             };
+            paginationPanel.Controls.Add(lblPageSize);
+            x += 80;
 
+            // Комбобокс выбора размера страницы
             cmbPageSize = new ComboBox
             {
-                Location = new Point(90, 7),
+                Location = new Point(x, 7),
                 Width = 60,
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
-            cmbPageSize.Items.AddRange(new object[] { 5, 10, 20, 50 });
+            cmbPageSize.Items.AddRange(new object[] { 5, 10, 20, 50, 100 });
             cmbPageSize.SelectedItem = 10;
-            cmbPageSize.SelectedIndexChanged += (s, e) =>
+            cmbPageSize.SelectedIndexChanged += CmbPageSize_SelectedIndexChanged;
+            paginationPanel.Controls.Add(cmbPageSize);
+            x += 70;
+
+            // Кнопка "Первая"
+            btnFirst = new Button
             {
-                if (cmbPageSize.SelectedItem != null)
-                    _presenter.SetPageSize((int)cmbPageSize.SelectedItem);
+                Text = "⏮️ Первая",
+                Location = new Point(x, 7),
+                Width = 80,
+                Enabled = false
             };
+            btnFirst.Click += BtnFirst_Click;
+            paginationPanel.Controls.Add(btnFirst);
+            x += 85;
 
-            btnFirst = new Button { Text = "«", Location = new Point(160, 7), Width = 30 };
-            btnPrev = new Button { Text = "‹", Location = new Point(195, 7), Width = 30 };
-            lblPageInfo = new Label { Text = "1 / 1", Location = new Point(230, 10), AutoSize = true };
-            btnNext = new Button { Text = "›", Location = new Point(270, 7), Width = 30 };
-            btnLast = new Button { Text = "»", Location = new Point(305, 7), Width = 30 };
-
-            btnFirst.Click += (s, e) => _presenter.GoToFirstPage();
-            btnPrev.Click += (s, e) => _presenter.GoToPreviousPage();
-            btnNext.Click += (s, e) => _presenter.GoToNextPage();
-            btnLast.Click += (s, e) => _presenter.GoToLastPage();
-
-            paginationPanel.Controls.AddRange(new Control[]
+            // Кнопка "Предыдущая"
+            btnPrev = new Button
             {
-            lblPageSize, cmbPageSize,
-            btnFirst, btnPrev, lblPageInfo, btnNext, btnLast
-            });
+                Text = "◀️ Назад",
+                Location = new Point(x, 7),
+                Width = 80,
+                Enabled = false
+            };
+            btnPrev.Click += BtnPrev_Click;
+            paginationPanel.Controls.Add(btnPrev);
+            x += 85;
+
+            // Информация о странице
+            lblPageInfo = new Label
+            {
+                Text = "Страница 1 из 1",
+                Location = new Point(x, 10),
+                AutoSize = true,
+                Font = new Font(Font, FontStyle.Bold)
+            };
+            paginationPanel.Controls.Add(lblPageInfo);
+            x += 100;
+
+            // Кнопка "Следующая"
+            btnNext = new Button
+            {
+                Text = "Вперёд ▶️",
+                Location = new Point(x, 7),
+                Width = 80,
+                Enabled = false
+            };
+            btnNext.Click += BtnNext_Click;
+            paginationPanel.Controls.Add(btnNext);
+            x += 85;
+
+            // Кнопка "Последняя"
+            btnLast = new Button
+            {
+                Text = "Последняя ⏭️",
+                Location = new Point(x, 7),
+                Width = 80,
+                Enabled = false
+            };
+            btnLast.Click += BtnLast_Click;
+            paginationPanel.Controls.Add(btnLast);
 
             this.Controls.Add(paginationPanel);
         }
 
-        // Реализация интерфейса IView
-        public void RefreshHeroesList()
+        private void InitializeSearchBox()
         {
-            try
+            var searchPanel = new Panel
             {
-                // Получаем данные из презентера (в реальной реализации)
-                // и обновляем DataGridView
-                var heroes = _presenter.GetAllHeroes(); // Этот метод нужно добавить в Presenter
+                Dock = DockStyle.Top,
+                Height = 35,
+                BackColor = Color.WhiteSmoke
+            };
 
-                dataGridView1.DataSource = heroes?.Select(h => new
-                {
-                    h.Id,
-                    h.Name,
-                    SpeciesName = h.Species?.Name ?? "Неизвестно",
-                    h.Hp,
-                    h.Strange,
-                    h.Genre,
-                    h.TypeOfDamage
-                }).ToList();
-
-                UpdatePaginationInfo();
-            }
-            catch (Exception ex)
+            var lblSearch = new Label
             {
-                MessageBox.Show($"Ошибка при обновлении списка: {ex.Message}",
-                    "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-            }
+                Text = "Поиск:",
+                Location = new Point(10, 8),
+                AutoSize = true
+            };
+            searchPanel.Controls.Add(lblSearch);
+
+            txtSearch = new TextBox
+            {
+                Location = new Point(60, 5),
+                Width = 200
+            };
+            txtSearch.KeyPress += TxtSearch_KeyPress;
+            searchPanel.Controls.Add(txtSearch);
+
+            var btnSearch = new Button
+            {
+                Text = "🔍 Найти",
+                Location = new Point(270, 5),
+                Width = 80
+            };
+            btnSearch.Click += BtnSearch_Click;
+            searchPanel.Controls.Add(btnSearch);
+
+            var btnClearSearch = new Button
+            {
+                Text = "Очистить",
+                Location = new Point(360, 5),
+                Width = 80
+            };
+            btnClearSearch.Click += BtnClearSearch_Click;
+            searchPanel.Controls.Add(btnClearSearch);
+
+            this.Controls.Add(searchPanel);
         }
 
-        public void UpdateStatusBar(string status)
-        {
-            statusLabel.Text = status;
-        }
+        #region Обработчики событий UI
 
-        private void UpdatePaginationInfo()
-        {
-            lblPageInfo.Text = $"{_presenter.CurrentPage} / {_presenter.TotalPages}";
-
-            btnFirst.Enabled = _presenter.CanGoToPreviousPage;
-            btnPrev.Enabled = _presenter.CanGoToPreviousPage;
-            btnNext.Enabled = _presenter.CanGoToNextPage;
-            btnLast.Enabled = _presenter.CanGoToNextPage;
-        }
-
-        // Обработчики событий
         private void BtnAddHero_Click(object sender, EventArgs e)
         {
             using (var form = new AddHeroForm())
             {
-                if (form.ShowDialog() == DialogResult.OK)
+                // В реальном приложении нужно загрузить список рас через Presenter
+                // form.SetSpeciesList(speciesData);
+
+                form.HeroAdded += (heroForm) =>
                 {
-                    _presenter.AddHero(form.HeroName, form.HeroSpeciesId, form.HeroGenre,
-                                     form.HeroStrange, form.HeroDamageType, form.HeroHp);
-                    RefreshHeroesList();
-                }
+                    // Генерируем событие для Presenter
+                    HeroAdded?.Invoke(new HeroAddedEventArgs
+                    {
+                        Name = heroForm.HeroName,
+                        SpeciesId = heroForm.HeroSpeciesId,
+                        Genre = heroForm.HeroGenre,
+                        Strange = heroForm.HeroStrange,
+                        DamageType = heroForm.HeroDamageType,
+                        Hp = heroForm.HeroHp
+                    });
+                };
+
+                form.ShowDialog();
             }
         }
 
         private void BtnDeleteHero_Click(object sender, EventArgs e)
         {
-            if (dataGridView1.CurrentRow != null && dataGridView1.CurrentRow.DataBoundItem != null)
+            if (dataGridView1.CurrentRow?.DataBoundItem != null)
             {
-                try
-                {
-                    var heroData = dataGridView1.CurrentRow.DataBoundItem as dynamic;
-                    if (heroData != null)
-                    {
-                        var result = MessageBox.Show($"Удалить героя '{heroData.Name}'?",
-                            "Подтверждение удаления",
-                            MessageBoxButtons.YesNo,
-                            MessageBoxIcon.Question);
+                dynamic heroData = dataGridView1.CurrentRow.DataBoundItem;
 
-                        if (result == DialogResult.Yes)
-                        {
-                            _presenter.DeleteHero(heroData.Id);
-                            RefreshHeroesList();
-                        }
-                    }
-                }
-                catch (Exception ex)
+                var result = MessageBox.Show(
+                    $"Вы действительно хотите удалить героя '{heroData.Name}'?\n" +
+                    "Это действие нельзя отменить!",
+                    "Подтверждение удаления",
+                    MessageBoxButtons.YesNo,
+                    MessageBoxIcon.Warning);
+
+                if (result == DialogResult.Yes)
                 {
-                    MessageBox.Show($"Ошибка при удалении: {ex.Message}",
-                        "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    // Генерируем событие для Presenter
+                    HeroDeleted?.Invoke(new HeroDeletedEventArgs
+                    {
+                        HeroId = heroData.Id
+                    });
                 }
             }
             else
             {
-                MessageBox.Show("Выберите героя для удаления",
-                    "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowMessage("Выберите героя для удаления", "Информация");
             }
         }
 
         private void BtnHitHero_Click(object sender, EventArgs e)
         {
-            if (dataGridView1.CurrentRow != null && dataGridView1.CurrentRow.DataBoundItem != null)
+            if (dataGridView1.CurrentRow?.DataBoundItem != null)
             {
-                try
+                dynamic heroData = dataGridView1.CurrentRow.DataBoundItem;
+
+                using (var form = new HitHeroForm(heroData))
                 {
-                    var heroData = dataGridView1.CurrentRow.DataBoundItem as dynamic;
-                    if (heroData != null)
+                    if (form.ShowDialog() == DialogResult.OK)
                     {
-                        using (var form = new HitHeroForm(heroData))
+                        // Генерируем событие для Presenter
+                        HeroDamaged?.Invoke(new HeroDamagedEventArgs
                         {
-                            if (form.ShowDialog() == DialogResult.OK)
-                            {
-                                _presenter.HitHero(heroData.Id, form.DamageAmount);
-                                RefreshHeroesList();
-                            }
-                        }
+                            HeroId = heroData.Id,
+                            Damage = form.DamageAmount
+                        });
                     }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка при нанесении урона: {ex.Message}",
-                        "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
             else
             {
-                MessageBox.Show("Выберите героя для нанесения урона",
-                    "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                ShowMessage("Выберите героя для нанесения урона", "Информация");
             }
         }
 
         private void BtnRefresh_Click(object sender, EventArgs e)
         {
-            RefreshHeroesList();
+            RefreshRequested?.Invoke();
+            txtSearch.Clear();
         }
 
         private void BtnAddSpecies_Click(object sender, EventArgs e)
@@ -438,412 +540,371 @@ namespace View
             {
                 if (form.ShowDialog() == DialogResult.OK)
                 {
-                    _presenter.AddSpecies(form.SpeciesName, form.SpeciesDescription);
-                    MessageBox.Show("Раса успешно добавлена", "Успех",
-                        MessageBoxButtons.OK, MessageBoxIcon.Information);
+                    // Генерируем событие для Presenter
+                    SpeciesAdded?.Invoke(new SpeciesAddedEventArgs
+                    {
+                        Name = form.SpeciesName,
+                        Description = form.SpeciesDescription
+                    });
                 }
             }
         }
 
         private void BtnShowSpecies_Click(object sender, EventArgs e)
         {
-            var species = _presenter.GetAllSpecies();
-            ShowSpeciesList(species);
+            // Запрашиваем у Presenter список рас
+            // В реальном приложении нужно реализовать метод в Presenter
+            ShowMessage("Функция показа всех рас будет реализована", "Информация");
         }
 
         private void BtnEditSpecies_Click(object sender, EventArgs e)
         {
-            var speciesList = _presenter.GetAllSpecies();
-            if (!speciesList.Any())
-            {
-                MessageBox.Show("Нет доступных рас для редактирования",
-                    "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            using (var form = new SelectSpeciesForm(speciesList, "Редактирование расы"))
-            {
-                if (form.ShowDialog() == DialogResult.OK && form.SelectedSpecies != null)
-                {
-                    using (var editForm = new EditSpeciesForm(form.SelectedSpecies))
-                    {
-                        if (editForm.ShowDialog() == DialogResult.OK)
-                        {
-                            var updatedSpecies = new Species
-                            {
-                                Id = form.SelectedSpecies.Id,
-                                Name = editForm.SpeciesName,
-                                Description = editForm.SpeciesDescription
-                            };
-
-                            _presenter.UpdateSpecies(updatedSpecies);
-                            MessageBox.Show("Раса успешно обновлена", "Успех",
-                                MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                    }
-                }
-            }
+            ShowMessage("Функция редактирования рас будет реализована", "Информация");
         }
 
         private void BtnDeleteSpecies_Click(object sender, EventArgs e)
         {
-            var speciesList = _presenter.GetAllSpecies();
-            if (!speciesList.Any())
-            {
-                MessageBox.Show("Нет доступных рас для удаления",
-                    "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                return;
-            }
-
-            using (var form = new SelectSpeciesForm(speciesList, "Удаление расы"))
-            {
-                if (form.ShowDialog() == DialogResult.OK && form.SelectedSpecies != null)
-                {
-                    var result = MessageBox.Show($"Удалить расу '{form.SelectedSpecies.Name}'?",
-                        "Подтверждение удаления",
-                        MessageBoxButtons.YesNo,
-                        MessageBoxIcon.Question);
-
-                    if (result == DialogResult.Yes)
-                    {
-                        try
-                        {
-                            _presenter.DeleteSpecies(form.SelectedSpecies.Id);
-                            MessageBox.Show("Раса успешно удалена", "Успех",
-                                MessageBoxButtons.OK, MessageBoxIcon.Information);
-                        }
-                        catch (Exception ex)
-                        {
-                            MessageBox.Show($"Ошибка при удалении: {ex.Message}",
-                                "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                        }
-                    }
-                }
-            }
+            ShowMessage("Функция удаления рас будет реализована", "Информация");
         }
 
         private void BtnStatistics_Click(object sender, EventArgs e)
         {
-            var stats = _presenter.GetStatistics();
-            ShowStatistics(stats);
+            // Запрашиваем у Presenter статистику
+            // В реальном приложении нужно реализовать метод в Presenter
+            ShowMessage("Функция статистики будет реализована", "Информация");
         }
 
         private void BtnGroupBySpecies_Click(object sender, EventArgs e)
         {
-            var grouped = _presenter.GroupHeroesBySpecies();
-            ShowGroupedHeroes(grouped, "Герои по расам");
+            ShowMessage("Группировка по расам будет реализована", "Информация");
         }
 
         private void BtnGroupByDamage_Click(object sender, EventArgs e)
         {
-            var grouped = _presenter.GroupHeroesByDamageType();
-            ShowGroupedHeroes(grouped, "Герои по типу урона");
+            ShowMessage("Группировка по типу урона будет реализована", "Информация");
         }
 
         private void BtnShowWounded_Click(object sender, EventArgs e)
         {
-            var wounded = _presenter.GetWoundedHeroes();
-            ShowHeroesList(wounded, "Раненые герои (HP < 50)");
+            ShowMessage("Список раненых героев будет показан", "Информация");
         }
 
         private void BtnShowStrongest_Click(object sender, EventArgs e)
         {
-            var strongest = _presenter.GetStrongestHeroes(3);
-            ShowHeroesList(strongest, "Топ-3 самых сильных героя");
+            ShowMessage("Топ-3 сильнейших героев будет показан", "Информация");
         }
 
-        // Вспомогательные методы отображения
-        private void ShowSpeciesList(List<Species> species)
+        private void BtnSearch_Click(object sender, EventArgs e)
         {
-            if (!species.Any())
+            if (!string.IsNullOrWhiteSpace(txtSearch.Text))
             {
-                MessageBox.Show("Нет доступных рас",
-                    "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                // Генерируем событие поиска для Presenter
+                HeroSearch?.Invoke(new HeroSearchEventArgs
+                {
+                    SearchTerm = txtSearch.Text.Trim()
+                });
+            }
+        }
+
+        private void BtnClearSearch_Click(object sender, EventArgs e)
+        {
+            txtSearch.Clear();
+            RefreshRequested?.Invoke();
+        }
+
+        private void TxtSearch_KeyPress(object sender, KeyPressEventArgs e)
+        {
+            if (e.KeyChar == (char)Keys.Enter)
+            {
+                BtnSearch_Click(sender, e);
+                e.Handled = true;
+            }
+        }
+
+        private void CmbPageSize_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            if (cmbPageSize.SelectedItem != null)
+            {
+                // Генерируем событие смены страницы для Presenter
+                PageChanged?.Invoke(new PageChangedEventArgs
+                {
+                    PageSize = (int)cmbPageSize.SelectedItem,
+                    PageNumber = 1 // Сбрасываем на первую страницу
+                });
+            }
+        }
+
+        private void BtnFirst_Click(object sender, EventArgs e)
+        {
+            PageChanged?.Invoke(new PageChangedEventArgs
+            {
+                PageSize = _pageSize,
+                PageNumber = 1
+            });
+        }
+
+        private void BtnPrev_Click(object sender, EventArgs e)
+        {
+            if (_currentPage > 1)
+            {
+                PageChanged?.Invoke(new PageChangedEventArgs
+                {
+                    PageSize = _pageSize,
+                    PageNumber = _currentPage - 1
+                });
+            }
+        }
+
+        private void BtnNext_Click(object sender, EventArgs e)
+        {
+            PageChanged?.Invoke(new PageChangedEventArgs
+            {
+                PageSize = _pageSize,
+                PageNumber = _currentPage + 1
+            });
+        }
+
+        private void BtnLast_Click(object sender, EventArgs e)
+        {
+            PageChanged?.Invoke(new PageChangedEventArgs
+            {
+                PageSize = _pageSize,
+                PageNumber = _totalPages
+            });
+        }
+
+        #endregion
+
+        #region Реализация интерфейса IView
+
+        private int _currentPage = 1;
+        private int _pageSize = 10;
+        private int _totalPages = 1;
+
+        public void RefreshHeroesList(List<Hero> heroes)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action<List<Hero>>(RefreshHeroesList), heroes);
                 return;
             }
 
-            var form = new Form
+            try
             {
-                Text = "Все расы",
-                Size = new Size(500, 400),
-                StartPosition = FormStartPosition.CenterParent,
-                MaximizeBox = false
-            };
+                // Преобразуем героев в анонимный тип для DataGridView
+                // ВАЖНО: свойства должны совпадать с DataPropertyName колонок
+                var displayData = heroes.Select(h => new
+                {
+                    Id = h.Id,
+                    Name = h.Name,
+                    SpeciesName = h.Species?.Name ?? "Неизвестно", // Используем SpeciesName вместо Species
+                    Hp = h.Hp,
+                    Strange = h.Strange, // Используем Strange вместо Strength
+                    Genre = h.Genre,
+                    TypeOfDamage = h.TypeOfDamage // Используем TypeOfDamage вместо DamageType
+                }).ToList();
 
-            var grid = new DataGridView
+                dataGridView1.DataSource = null; // Очищаем данные
+                dataGridView1.DataSource = displayData; // Устанавливаем новые данные
+
+                // Обновляем статус
+                UpdateStatusBar($"Показано {heroes.Count} из {_totalItems} героев");
+            }
+            catch (Exception ex)
             {
-                Dock = DockStyle.Fill,
-                DataSource = species,
-                ReadOnly = true,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect
-            };
-
-            var btnClose = new Button
-            {
-                Text = "Закрыть",
-                Dock = DockStyle.Bottom,
-                Height = 30
-            };
-            btnClose.Click += (s, e) => form.Close();
-
-            var panel = new Panel { Dock = DockStyle.Fill };
-            panel.Controls.Add(grid);
-
-            form.Controls.Add(panel);
-            form.Controls.Add(btnClose);
-            form.ShowDialog();
+                ShowError($"Ошибка при обновлении списка героев: {ex.Message}");
+                Console.WriteLine($"Ошибка в RefreshHeroesList: {ex}");
+            }
         }
 
-        private void ShowStatistics(HeroStatistics stats)
+        public void UpdateStatusBar(string status)
         {
-            var form = new Form
+            if (this.InvokeRequired)
             {
-                Text = "Статистика героев",
-                Size = new Size(650, 500),
-                StartPosition = FormStartPosition.CenterParent,
-                MaximizeBox = false,
-                FormBorderStyle = FormBorderStyle.FixedDialog
-            };
-
-            var textBox = new TextBox
-            {
-                Multiline = true,
-                Dock = DockStyle.Fill,
-                ScrollBars = ScrollBars.Vertical,
-                Font = new Font("Consolas", 9),
-                ReadOnly = true,
-                BackColor = Color.White
-            };
-
-            textBox.Text = FormatStatistics(stats);
-            form.Controls.Add(textBox);
-            form.ShowDialog();
-        }
-
-        private string FormatStatistics(HeroStatistics stats)
-        {
-            var sb = new System.Text.StringBuilder();
-            sb.AppendLine("═══════════════════════════════════════");
-            sb.AppendLine("             СТАТИСТИКА ГЕРОЕВ");
-            sb.AppendLine("═══════════════════════════════════════");
-            sb.AppendLine();
-
-            sb.AppendLine("ОБЩАЯ СТАТИСТИКА:");
-            sb.AppendLine($"Всего героев: {stats.TotalHeroes}");
-            sb.AppendLine($"Средняя сила: {stats.AverageStrength:F2}");
-            sb.AppendLine($"Среднее HP: {stats.AverageHp:F2}");
-            sb.AppendLine($"Максимальная сила: {stats.MaxStrength}");
-            sb.AppendLine($"Минимальное HP: {stats.MinHp:F2}");
-            sb.AppendLine();
-
-            sb.AppendLine("СТАТИСТИКА ПО РАСАМ:");
-            if (stats.SpeciesStats != null && stats.SpeciesStats.Any())
-            {
-                foreach (var stat in stats.SpeciesStats)
-                {
-                    sb.AppendLine($"  {stat.Species}:");
-                    sb.AppendLine($"    Количество: {stat.Count} героев");
-                    sb.AppendLine($"    Средняя сила: {stat.AvgStrength:F1}");
-                    sb.AppendLine($"    Среднее HP: {stat.AvgHp:F1}");
-                }
-            }
-            else
-            {
-                sb.AppendLine("  Нет данных");
-            }
-            sb.AppendLine();
-
-            sb.AppendLine("СТАТИСТИКА ПО ТИПАМ УРОНА:");
-            if (stats.DamageTypeStats != null && stats.DamageTypeStats.Any())
-            {
-                foreach (var stat in stats.DamageTypeStats)
-                {
-                    sb.AppendLine($"  {stat.DamageType}:");
-                    sb.AppendLine($"    Количество: {stat.Count} героев");
-                    sb.AppendLine($"    Общая сила: {stat.TotalStrength}");
-                }
-            }
-            else
-            {
-                sb.AppendLine("  Нет данных");
-            }
-            sb.AppendLine();
-
-            sb.AppendLine("СТАТИСТИКА ПО ГЕНДЕРАМ:");
-            if (stats.GenderStats != null && stats.GenderStats.Any())
-            {
-                foreach (var stat in stats.GenderStats)
-                {
-                    sb.AppendLine($"  {stat.Gender}: {stat.Count} героев ({stat.Percentage:F1}%)");
-                }
-            }
-            else
-            {
-                sb.AppendLine("  Нет данных");
-            }
-            sb.AppendLine();
-
-            sb.AppendLine($"ГЕРОИ С НИЗКИМ HP (<50): {stats.LowHpHeroes?.Count ?? 0}");
-            if (stats.LowHpHeroes != null && stats.LowHpHeroes.Any())
-            {
-                foreach (var hero in stats.LowHpHeroes)
-                {
-                    sb.AppendLine($"  {hero.Name} - {hero.Hp:F1} HP ({hero.Species?.Name})");
-                }
-            }
-            sb.AppendLine();
-            sb.AppendLine("═══════════════════════════════════════");
-
-            return sb.ToString();
-        }
-
-        private void ShowGroupedHeroes(Dictionary<string, List<Hero>> grouped, string title)
-        {
-            if (!grouped.Any())
-            {
-                MessageBox.Show("Нет данных для отображения",
-                    "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                this.Invoke(new Action<string>(UpdateStatusBar), status);
                 return;
             }
 
-            var form = new Form
-            {
-                Text = title,
-                Size = new Size(500, 400),
-                StartPosition = FormStartPosition.CenterParent,
-                MaximizeBox = false
-            };
-
-            var treeView = new TreeView
-            {
-                Dock = DockStyle.Fill,
-                CheckBoxes = false,
-                FullRowSelect = true
-            };
-
-            foreach (var group in grouped.OrderBy(g => g.Key))
-            {
-                var node = new TreeNode($"{group.Key} ({group.Value.Count} героев)");
-                foreach (var hero in group.Value.OrderBy(h => h.Name))
-                {
-                    var heroNode = new TreeNode($"{hero.Name} - Сила: {hero.Strange}, HP: {hero.Hp:F1}");
-                    heroNode.Tag = hero;
-                    node.Nodes.Add(heroNode);
-                }
-                treeView.Nodes.Add(node);
-            }
-
-            var btnClose = new Button
-            {
-                Text = "Закрыть",
-                Dock = DockStyle.Bottom,
-                Height = 30
-            };
-            btnClose.Click += (s, e) => form.Close();
-
-            var panel = new Panel { Dock = DockStyle.Fill };
-            panel.Controls.Add(treeView);
-
-            form.Controls.Add(panel);
-            form.Controls.Add(btnClose);
-            form.ShowDialog();
+            statusLabel.Text = status;
         }
 
-        private void ShowHeroesList(List<Hero> heroes, string title)
+        public void ShowMessage(string message, string title = "Информация")
         {
-            if (!heroes.Any())
+            if (this.InvokeRequired)
             {
-                MessageBox.Show("Нет данных для отображения",
-                    "Информация", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                this.Invoke(new Action<string, string>(ShowMessage), message, title);
                 return;
             }
 
-            var form = new Form
-            {
-                Text = title,
-                Size = new Size(500, 400),
-                StartPosition = FormStartPosition.CenterParent,
-                MaximizeBox = false
-            };
-
-            var dataGridView = new DataGridView
-            {
-                Dock = DockStyle.Fill,
-                DataSource = heroes.Select(h => new
-                {
-                    h.Id,
-                    h.Name,
-                    SpeciesName = h.Species?.Name ?? "Неизвестно",
-                    h.Hp,
-                    h.Strange,
-                    h.Genre,
-                    h.TypeOfDamage
-                }).ToList(),
-                ReadOnly = true,
-                AutoSizeColumnsMode = DataGridViewAutoSizeColumnsMode.Fill,
-                SelectionMode = DataGridViewSelectionMode.FullRowSelect
-            };
-
-            var btnClose = new Button
-            {
-                Text = "Закрыть",
-                Dock = DockStyle.Bottom,
-                Height = 30
-            };
-            btnClose.Click += (s, e) => form.Close();
-
-            var panel = new Panel { Dock = DockStyle.Fill };
-            panel.Controls.Add(dataGridView);
-
-            form.Controls.Add(panel);
-            form.Controls.Add(btnClose);
-            form.ShowDialog();
+            MessageBox.Show(this, message, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
-        // Двойной клик по DataGridView
-        private void MainForm_Load(object sender, EventArgs e)
+        public void ShowError(string error, string title = "Ошибка")
         {
-            dataGridView1.CellDoubleClick += DataGridView1_CellDoubleClick;
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action<string, string>(ShowError), error, title);
+                return;
+            }
+
+            MessageBox.Show(this, error, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+        }
+
+        public void SetPaginationInfo(int currentPage, int totalPages, int totalItems)
+        {
+            if (this.InvokeRequired)
+            {
+                this.Invoke(new Action<int, int, int>(SetPaginationInfo), currentPage, totalPages, totalItems);
+                return;
+            }
+
+            _currentPage = currentPage;
+            _totalPages = totalPages;
+            _totalItems = totalItems;
+
+            lblPageInfo.Text = $"Страница {currentPage} из {totalPages} (Всего: {totalItems})";
+
+            btnFirst.Enabled = currentPage > 1;
+            btnPrev.Enabled = currentPage > 1;
+            btnNext.Enabled = currentPage < totalPages;
+            btnLast.Enabled = currentPage < totalPages;
+
+            // Обновляем выбранный размер страницы
+            if (cmbPageSize.SelectedItem == null || (int)cmbPageSize.SelectedItem != _pageSize)
+            {
+                cmbPageSize.SelectedItem = _pageSize;
+            }
+        }
+
+        public void ShowHeroDetails(Hero hero)
+        {
+            ShowMessage(
+                $"Детальная информация о герое:\n\n" +
+                $"🏷️ Имя: {hero.Name}\n" +
+                $"👥 Раса: {hero.Species?.Name ?? "Неизвестно"}\n" +
+                $"❤️ HP: {hero.Hp:F1}\n" +
+                $"💪 Сила: {hero.Strange}\n" +
+                $"👤 Гендер: {hero.Genre}\n" +
+                $"⚔️ Тип урона: {hero.TypeOfDamage}\n" +
+                $"🆔 ID: {hero.Id}",
+                $"Герой: {hero.Name}");
+        }
+
+        public void ShowStatistics(object statistics)
+        {
+            // Временная реализация - в реальном приложении будет отдельная форма
+            ShowMessage("Статистика будет отображена в отдельном окне", "Статистика");
+        }
+
+        public void ShowGroupedHeroes(Dictionary<string, List<Hero>> grouped, string title)
+        {
+            // Временная реализация
+            var message = $"{title}:\n\n";
+            foreach (var group in grouped)
+            {
+                message += $"{group.Key} ({group.Value.Count} героев):\n";
+                foreach (var hero in group.Value.Take(3))
+                {
+                    message += $"  • {hero.Name} (HP: {hero.Hp:F1}, Сила: {hero.Strange})\n";
+                }
+                if (group.Value.Count > 3)
+                    message += $"  ... и еще {group.Value.Count - 3} героев\n";
+                message += "\n";
+            }
+            ShowMessage(message, title);
+        }
+
+        public void ShowSpeciesList(List<Species> species, Action<Species> onSelected = null)
+        {
+            // Временная реализация
+            var message = "Список рас:\n\n";
+            foreach (var s in species)
+            {
+                message += $"🟢 {s.Name} (ID: {s.Id})\n";
+                if (!string.IsNullOrEmpty(s.Description))
+                    message += $"   Описание: {s.Description}\n";
+                message += "\n";
+            }
+            ShowMessage(message, "Все расы");
+        }
+
+        public void ShowHeroSelection(List<Hero> heroes, Action<Hero> onSelected = null)
+        {
+            // Временная реализация
+            var message = "Выберите героя:\n\n";
+            for (int i = 0; i < heroes.Count; i++)
+            {
+                var hero = heroes[i];
+                message += $"{i + 1}. {hero.Name} (HP: {hero.Hp:F1}, Сила: {hero.Strange})\n";
+            }
+            ShowMessage(message, "Выбор героя");
+        }
+
+        #endregion
+
+        #region Обработчики DataGridView
+
+        private void DataGridView1_CellFormatting(object sender, DataGridViewCellFormattingEventArgs e)
+        {
+            if (e.RowIndex >= 0 && e.ColumnIndex >= 0 &&
+                dataGridView1.Columns[e.ColumnIndex].Name == "colHp")
+            {
+                var row = dataGridView1.Rows[e.RowIndex];
+                if (row.DataBoundItem != null)
+                {
+                    dynamic heroData = row.DataBoundItem;
+                    double hp = heroData.Hp;
+
+                    // Просто показываем число без цветов и галочек
+                    if (hp <= 0)
+                    {
+                        e.Value = "0.0 (мертв)";
+                        e.CellStyle.ForeColor = Color.Gray;
+                    }
+                    else
+                    {
+                        e.Value = $"{hp:F1}";
+                        e.CellStyle.ForeColor = Color.Black;
+                    }
+                }
+            }
         }
 
         private void DataGridView1_CellDoubleClick(object sender, DataGridViewCellEventArgs e)
         {
             if (e.RowIndex >= 0 && dataGridView1.Rows[e.RowIndex].DataBoundItem != null)
             {
-                try
-                {
-                    var heroData = dataGridView1.Rows[e.RowIndex].DataBoundItem as dynamic;
-                    if (heroData != null)
-                    {
-                        MessageBox.Show(
-                            $"Информация о герое:\n\n" +
-                            $"Имя: {heroData.Name}\n" +
-                            $"Раса: {heroData.SpeciesName}\n" +
-                            $"HP: {heroData.Hp:F1}\n" +
-                            $"Сила: {heroData.Strange}\n" +
-                            $"Гендер: {heroData.Genre}\n" +
-                            $"Тип урона: {heroData.TypeOfDamage}",
-                            "Информация о герое",
-                            MessageBoxButtons.OK,
-                            MessageBoxIcon.Information);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show($"Ошибка при получении информации: {ex.Message}",
-                        "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                }
+                dynamic heroData = dataGridView1.Rows[e.RowIndex].DataBoundItem;
+
+                ShowMessage(
+                    $"Краткая информация:\n\n" +
+                    $"🏷️ Имя: {heroData.Name}\n" +
+                    $"👥 Раса: {heroData.SpeciesName}\n" +
+                    $"❤️ HP: {heroData.Hp}\n" +
+                    $"💪 Сила: {heroData.Strange}\n" +
+                    $"👤 Гендер: {heroData.Genre}\n" +
+                    $"⚔️ Тип: {heroData.TypeOfDamage}",
+                    $"Герой: {heroData.Name}");
             }
         }
-        public void ShowMessage(string message, string title = "Информация")
+
+        private void DataGridView1_SelectionChanged(object sender, EventArgs e)
         {
-            MessageBox.Show(message, title, MessageBoxButtons.OK, MessageBoxIcon.Information);
+            if (dataGridView1.CurrentRow?.DataBoundItem != null)
+            {
+                dynamic heroData = dataGridView1.CurrentRow.DataBoundItem;
+                UpdateStatusBar($"Выбран: {heroData.Name} | HP: {heroData.Hp} | Сила: {heroData.Strange} | Тип: {heroData.TypeOfDamage}");
+            }
         }
 
-        public void ShowError(string error, string title = "Ошибка")
+        #endregion
+
+        private int _totalItems = 0;
+
+        protected override void OnFormClosed(FormClosedEventArgs e)
         {
-            MessageBox.Show(error, title, MessageBoxButtons.OK, MessageBoxIcon.Error);
+            _presenter?.Dispose();
+            base.OnFormClosed(e);
         }
     }
 }

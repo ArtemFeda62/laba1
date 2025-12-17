@@ -34,37 +34,36 @@ namespace DataAccessLayer.Dapper
         public IEnumerable<Hero> ReadAll()
         {
             var sql = @"
-                SELECT h.*, s.Id as SpeciesId, s.Name as SpeciesName, s.Description
-                FROM Heroes h 
-                INNER JOIN Species s ON h.SpeciesId = s.Id";
+        SELECT 
+            h.Id, h.Name, h.SpeciesId, h.Genre, h.Strange, h.Hp, h.TypeOfDamage,
+            s.Id, s.Name, s.Description
+        FROM Heroes h 
+        LEFT JOIN Species s ON h.SpeciesId = s.Id";  
 
             using (var connection = CreateConnection())
             {
                 return connection.Query<Hero, Species, Hero>(sql,
                     (hero, species) =>
                     {
-                        hero.Species = species;
-                        hero.SpeciesId = species.Id;
+                        hero.Species = species;  
                         return hero;
                     },
-                    splitOn: "SpeciesId");
+                    splitOn: "Id");
             }
         }
 
         public (IEnumerable<Hero> heroes, int totalCount) ReadAllWithPagination(int pageNumber, int pageSize)
         {
             var sql = @"
-                SELECT 
-                    h.*, 
-                    s.Id as SpeciesId, 
-                    s.Name as SpeciesName, 
-                    s.Description
-                FROM Heroes h 
-                INNER JOIN Species s ON h.SpeciesId = s.Id
-                ORDER BY h.Id
-                OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
+        SELECT 
+            h.Id, h.Name, h.SpeciesId, h.Genre, h.Strange, h.Hp, h.TypeOfDamage,
+            s.Id, s.Name, s.Description
+        FROM Heroes h 
+        LEFT JOIN Species s ON h.SpeciesId = s.Id
+        ORDER BY h.Id
+        OFFSET @Offset ROWS FETCH NEXT @PageSize ROWS ONLY;
 
-                SELECT COUNT(*) FROM Heroes;";
+        SELECT COUNT(*) FROM Heroes;";
 
             using (var connection = CreateConnection())
             {
@@ -77,11 +76,10 @@ namespace DataAccessLayer.Dapper
                     var heroes = multi.Read<Hero, Species, Hero>(
                         (hero, species) =>
                         {
-                            hero.Species = species;
-                            hero.SpeciesId = species.Id;
+                            hero.Species = species;  
                             return hero;
                         },
-                        splitOn: "SpeciesId"
+                        splitOn: "Id"  
                     ).ToList();
 
                     var totalCount = multi.ReadSingle<int>();

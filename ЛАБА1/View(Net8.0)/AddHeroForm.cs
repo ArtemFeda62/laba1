@@ -1,12 +1,7 @@
-﻿using Presenter;
+﻿// View/AddHeroForm.cs
 using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
 using System.Drawing;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 
 namespace View
@@ -20,18 +15,17 @@ namespace View
         public string HeroDamageType { get; private set; }
         public double HeroHp { get; private set; }
 
-        private AddHeroPresenter _presenter;
         private ComboBox cmbSpecies;
         private TextBox txtName, txtGenre, txtDamageType;
         private NumericUpDown numStrange, numHp;
         private Button btnOk, btnCancel;
 
+        // Событие для передачи данных обратно в MainForm
+        public event Action<AddHeroForm> HeroAdded;
+
         public AddHeroForm()
         {
-            _presenter = new AddHeroPresenter();
             InitializeForm();
-            LoadSpecies();
-            InitializeComponent();
         }
 
         private void InitializeForm()
@@ -47,27 +41,69 @@ namespace View
             int controlWidth = 200;
 
             // Имя героя
-            var lblName = new Label { Text = "Имя героя:", Location = new Point(10, y), Width = labelWidth };
-            txtName = new TextBox { Location = new Point(140, y - 3), Width = controlWidth };
+            var lblName = new Label
+            {
+                Text = "Имя героя:",
+                Location = new Point(10, y),
+                Width = labelWidth
+            };
+            txtName = new TextBox
+            {
+                Location = new Point(140, y - 3),
+                Width = controlWidth
+            };
             y += 30;
 
             // Раса
-            var lblSpecies = new Label { Text = "Раса:", Location = new Point(10, y), Width = labelWidth };
+            var lblSpecies = new Label
+            {
+                Text = "Раса:",
+                Location = new Point(10, y),
+                Width = labelWidth
+            };
             cmbSpecies = new ComboBox
             {
                 Location = new Point(140, y - 3),
                 Width = controlWidth,
                 DropDownStyle = ComboBoxStyle.DropDownList
             };
+            // В реальном приложении список рас загружается через Presenter
+            // Здесь просто тестовые данные
+            cmbSpecies.Items.AddRange(new object[]
+            {
+                new { Id = 1, Name = "Человек" },
+                new { Id = 2, Name = "Эльф" },
+                new { Id = 3, Name = "Гном" },
+                new { Id = 4, Name = "Орк" },
+                new { Id = 5, Name = "Драконорожденный" }
+            });
+            cmbSpecies.DisplayMember = "Name";
+            cmbSpecies.ValueMember = "Id";
+            if (cmbSpecies.Items.Count > 0)
+                cmbSpecies.SelectedIndex = 0;
             y += 30;
 
             // Гендер
-            var lblGenre = new Label { Text = "Гендер:", Location = new Point(10, y), Width = labelWidth };
-            txtGenre = new TextBox { Location = new Point(140, y - 3), Width = controlWidth };
+            var lblGenre = new Label
+            {
+                Text = "Гендер:",
+                Location = new Point(10, y),
+                Width = labelWidth
+            };
+            txtGenre = new TextBox
+            {
+                Location = new Point(140, y - 3),
+                Width = controlWidth
+            };
             y += 30;
 
             // Сила
-            var lblStrange = new Label { Text = "Сила:", Location = new Point(10, y), Width = labelWidth };
+            var lblStrange = new Label
+            {
+                Text = "Сила:",
+                Location = new Point(10, y),
+                Width = labelWidth
+            };
             numStrange = new NumericUpDown
             {
                 Location = new Point(140, y - 3),
@@ -79,12 +115,26 @@ namespace View
             y += 30;
 
             // Тип урона
-            var lblDamageType = new Label { Text = "Тип урона:", Location = new Point(10, y), Width = labelWidth };
-            txtDamageType = new TextBox { Location = new Point(140, y - 3), Width = controlWidth };
+            var lblDamageType = new Label
+            {
+                Text = "Тип урона:",
+                Location = new Point(10, y),
+                Width = labelWidth
+            };
+            txtDamageType = new TextBox
+            {
+                Location = new Point(140, y - 3),
+                Width = controlWidth
+            };
             y += 30;
 
             // HP
-            var lblHp = new Label { Text = "HP:", Location = new Point(10, y), Width = labelWidth };
+            var lblHp = new Label
+            {
+                Text = "HP:",
+                Location = new Point(10, y),
+                Width = labelWidth
+            };
             numHp = new NumericUpDown
             {
                 Location = new Point(140, y - 3),
@@ -101,19 +151,21 @@ namespace View
             {
                 Text = "Добавить",
                 Location = new Point(100, y),
-                Width = 80,
-                DialogResult = DialogResult.OK
+                Width = 80
             };
             btnCancel = new Button
             {
                 Text = "Отмена",
                 Location = new Point(190, y),
-                Width = 80,
-                DialogResult = DialogResult.Cancel
+                Width = 80
             };
 
             btnOk.Click += BtnOk_Click;
-            btnCancel.Click += (s, e) => this.Close();
+            btnCancel.Click += (s, e) =>
+            {
+                this.DialogResult = DialogResult.Cancel;
+                this.Close();
+            };
 
             this.Controls.AddRange(new Control[] {
                 lblName, txtName,
@@ -129,55 +181,82 @@ namespace View
             this.CancelButton = btnCancel;
         }
 
-        private void LoadSpecies()
-        {
-            var species = _presenter.GetAvailableSpecies();
-            cmbSpecies.DisplayMember = "Name";
-            cmbSpecies.ValueMember = "Id";
-            cmbSpecies.DataSource = species;
-
-            if (species.Count > 0)
-                cmbSpecies.SelectedIndex = 0;
-        }
-
         private void BtnOk_Click(object sender, EventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(txtName.Text))
-            {
-                MessageBox.Show("Введите имя героя", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                txtName.Focus();
+            if (!ValidateInput())
                 return;
-            }
 
-            if (string.IsNullOrWhiteSpace(txtGenre.Text))
-            {
-                MessageBox.Show("Введите гендер", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                txtGenre.Focus();
-                return;
-            }
-
-            if (string.IsNullOrWhiteSpace(txtDamageType.Text))
-            {
-                MessageBox.Show("Введите тип урона", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                txtDamageType.Focus();
-                return;
-            }
-
-            if (cmbSpecies.SelectedItem == null)
-            {
-                MessageBox.Show("Выберите расу", "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                return;
-            }
-
+            // Сохраняем данные
             HeroName = txtName.Text.Trim();
-            HeroSpeciesId = (int)cmbSpecies.SelectedValue;
+
+            if (cmbSpecies.SelectedItem != null)
+            {
+                dynamic selectedItem = cmbSpecies.SelectedItem;
+                HeroSpeciesId = selectedItem.Id;
+            }
+
             HeroGenre = txtGenre.Text.Trim();
             HeroStrange = (int)numStrange.Value;
             HeroDamageType = txtDamageType.Text.Trim();
             HeroHp = (double)numHp.Value;
 
+            // Вызываем событие
+            HeroAdded?.Invoke(this);
+
             this.DialogResult = DialogResult.OK;
             this.Close();
+        }
+
+        private bool ValidateInput()
+        {
+            if (string.IsNullOrWhiteSpace(txtName.Text))
+            {
+                MessageBox.Show("Введите имя героя", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                txtName.Focus();
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtGenre.Text))
+            {
+                MessageBox.Show("Введите гендер", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                txtGenre.Focus();
+                return false;
+            }
+
+            if (string.IsNullOrWhiteSpace(txtDamageType.Text))
+            {
+                MessageBox.Show("Введите тип урона", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                txtDamageType.Focus();
+                return false;
+            }
+
+            if (cmbSpecies.SelectedItem == null)
+            {
+                MessageBox.Show("Выберите расу", "Ошибка",
+                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                return false;
+            }
+
+            return true;
+        }
+
+        // Метод для установки списка рас (вызывается из MainForm через Presenter)
+        public void SetSpeciesList(object[] speciesList)
+        {
+            if (cmbSpecies.InvokeRequired)
+            {
+                cmbSpecies.Invoke(new Action<object[]>(SetSpeciesList), speciesList);
+                return;
+            }
+
+            cmbSpecies.Items.Clear();
+            cmbSpecies.Items.AddRange(speciesList);
+
+            if (cmbSpecies.Items.Count > 0)
+                cmbSpecies.SelectedIndex = 0;
         }
     }
 }

@@ -2,16 +2,15 @@
 using Ninject;
 using Shared;
 using Shared.Domain;
+using Shared.Interfaces;
 using Shared.Interfases;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Presenter
 {
-    public class MainPresenter
+    public class MainPresenter : IDisposable
     {
         private readonly IView _view;
         private readonly Logic _logic;
@@ -26,60 +25,55 @@ namespace Presenter
         {
             _view = view;
 
+
             IKernel ninjectKernel = new StandardKernel(new SimpleConfigModule());
             _logic = ninjectKernel.Get<Logic>();
             _heroService = ninjectKernel.Get<IHeroService>();
+
+
+            SubscribeToViewEvents();
+
+            Initialize();
         }
 
-        public void Initialize()
+        private void SubscribeToViewEvents()
         {
-            RefreshHeroesList();
+
+            _view.HeroAdded += OnHeroAdded;
+            _view.HeroDeleted += OnHeroDeleted;
+            _view.HeroDamaged += OnHeroDamaged;
+            _view.HeroSearch += OnHeroSearch;
+            _view.PageChanged += OnPageChanged;
+            _view.RefreshRequested += OnRefreshRequested;
+            _view.SpeciesAdded += OnSpeciesAdded;
+            _view.SpeciesDeleted += OnSpeciesDeleted;
+            _view.SpeciesUpdated += OnSpeciesUpdated;
         }
 
-        // Пагинация
-        public void SetPageSize(int pageSize)
+        private void UnsubscribeFromViewEvents()
         {
-            _pageSize = pageSize;
-            _currentPage = 1;
-            RefreshHeroesList();
+            _view.HeroAdded -= OnHeroAdded;
+            _view.HeroDeleted -= OnHeroDeleted;
+            _view.HeroDamaged -= OnHeroDamaged;
+            _view.HeroSearch -= OnHeroSearch;
+            _view.PageChanged -= OnPageChanged;
+            _view.RefreshRequested -= OnRefreshRequested;
+
+            _view.SpeciesAdded -= OnSpeciesAdded;
+            _view.SpeciesDeleted -= OnSpeciesDeleted;
+            _view.SpeciesUpdated -= OnSpeciesUpdated;
         }
 
-        public void GoToFirstPage()
+        private void Initialize()
         {
-            _currentPage = 1;
-            RefreshHeroesList();
+            LoadHeroes();
         }
 
-        public void GoToPreviousPage()
-        {
-            if (_currentPage > 1)
-            {
-                _currentPage--;
-                RefreshHeroesList();
-            }
-        }
-
-        public void GoToNextPage()
-        {
-            if (_currentPage < _totalPages)
-            {
-                _currentPage++;
-                RefreshHeroesList();
-            }
-        }
-
-        public void GoToLastPage()
-        {
-            _currentPage = _totalPages;
-            RefreshHeroesList();
-        }
-
-        // Герои
-        public void RefreshHeroesList()
+        private void LoadHeroes()
         {
             try
             {
-                _totalHeroes = _logic.GetListHeros().Count;
+                _totalHeroes = _logic.GetTotalHeroesCount();
                 _totalPages = (int)Math.Ceiling((double)_totalHeroes / _pageSize);
 
                 if (_currentPage > _totalPages && _totalPages > 0)
@@ -87,164 +81,265 @@ namespace Presenter
                 else if (_totalPages == 0)
                     _currentPage = 1;
 
-                var pagedHeroes = _logic.GetHeroesWithPagination(_currentPage, _pageSize);
+                var heroes = _logic.GetHeroesWithPagination(_currentPage, _pageSize);
 
-                var displayData = pagedHeroes.Select(h => new
+                // Передаем данные во View
+                _view.RefreshHeroesList(heroes);
+                _view.SetPaginationInfo(_currentPage, _totalPages, _totalHeroes);
+                _view.UpdateStatusBar($"Всего героев: {_totalHeroes} | Страница: {_currentPage} из {_totalPages}");
+            }
+            catch (Exception ex)
+            {
+                _view.ShowError($"Ошибка при загрузке героев: {ex.Message}");
+            }
+        }
+        private void OnHeroAdded(HeroAddedEventArgs e)
+        {
+            try
+            {
+                _logic.CreateHero(e.Name, e.SpeciesId, e.Genre, e.Strange, e.DamageType, e.Hp);
+                _view.ShowMessage($"Герой {e.Name} успешно добавлен!", "Успех");
+                LoadHeroes();
+            }
+            catch (Exception ex)
+            {
+                _view.ShowError($"Ошибка при добавлении героя: {ex.Message}");
+            }
+        }
+
+        private void OnHeroDeleted(HeroDeletedEventArgs e)
+        {
+            try
+            {
+                var hero = _logic.GetHero(e.HeroId);
+                if (hero != null)
                 {
-                    h.Id,
-                    h.Name,
-                    SpeciesName = h.Species?.Name ?? "Неизвестно",
-                    h.Hp,
-                    h.Strange,
-                    h.Genre,
-                    h.TypeOfDamage
-                }).ToList();
-
-                _view.RefreshHeroesList();
-                UpdateStatusBar();
+                    _logic.KillHero(e.HeroId);
+                    _view.ShowMessage($"Герой {hero.Name} удален", "Успех");
+                    LoadHeroes();
+                }
+                else
+                {
+                    _view.ShowError("Герой не найден");
+                }
             }
             catch (Exception ex)
             {
-                // Здесь можно вызвать метод View для отображения ошибки
-                Console.WriteLine($"Ошибка при обновлении списка героев: {ex.Message}");
+                _view.ShowError($"Ошибка при удалении героя: {ex.Message}");
             }
         }
 
-        private void UpdateStatusBar()
-        {
-            _view.UpdateStatusBar($"Всего героев: {_totalHeroes} | Страница: {_currentPage} из {_totalPages}");
-        }
-
-        public void AddHero(string name, int speciesId, string genre, int strange, string damageType, double hp)
+        private void OnHeroDamaged(HeroDamagedEventArgs e)
         {
             try
             {
-                _logic.CreateHero(name, speciesId, genre, strange, damageType, hp);
-                RefreshHeroesList();
+                var hero = _logic.GetHero(e.HeroId);
+                if (hero != null)
+                {
+                    var oldHp = hero.Hp;
+                    _logic.HitHero(e.HeroId, e.Damage);
+
+                    var updatedHero = _logic.GetHero(e.HeroId);
+                    if (updatedHero.Hp <= 0)
+                    {
+                        _view.ShowMessage($"Герой {hero.Name} погиб!", "Информация");
+                    }
+                    else
+                    {
+                        _view.ShowMessage(
+                            $"Герою {hero.Name} нанесен урон {e.Damage}. " +
+                            $"Осталось HP: {updatedHero.Hp:F1}", "Урон нанесен");
+                    }
+
+                    LoadHeroes();
+                }
+                else
+                {
+                    _view.ShowError("Герой не найден");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при добавлении героя: {ex.Message}");
+                _view.ShowError($"Ошибка при нанесении урона: {ex.Message}");
             }
         }
 
-        public void DeleteHero(int id)
+        private void OnHeroSearch(HeroSearchEventArgs e)
         {
             try
             {
-                _logic.KillHero(id);
-                RefreshHeroesList();
+                var heroes = _logic.FindHeroesByName(e.SearchTerm);
+                if (heroes.Any())
+                {
+                    _view.RefreshHeroesList(heroes);
+                    _view.UpdateStatusBar($"Найдено героев: {heroes.Count}");
+                }
+                else
+                {
+                    _view.ShowMessage($"Героев по запросу '{e.SearchTerm}' не найдено");
+                    LoadHeroes();
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при удалении героя: {ex.Message}");
+                _view.ShowError($"Ошибка при поиске: {ex.Message}");
             }
         }
 
-        public void HitHero(int id, double damage)
+        private void OnPageChanged(PageChangedEventArgs e)
+        {
+            _pageSize = e.PageSize;
+            _currentPage = e.PageNumber;
+            LoadHeroes();
+        }
+
+        private void OnRefreshRequested()
+        {
+            LoadHeroes();
+        }
+
+        private void OnSpeciesAdded(SpeciesAddedEventArgs e)
         {
             try
             {
-                _logic.HitHero(id, damage);
-                RefreshHeroesList();
+                _logic.AddSpecies(e.Name, e.Description);
+                _view.ShowMessage($"Раса {e.Name} успешно добавлена!", "Успех");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при нанесении урона: {ex.Message}");
+                _view.ShowError($"Ошибка при добавлении расы: {ex.Message}");
             }
         }
 
-        // Расы
-        public List<Species> GetAllSpecies()
-        {
-            return _logic.GetAllSpecies();
-        }
-
-        public void AddSpecies(string name, string description)
+        private void OnSpeciesDeleted(SpeciesDeletedEventArgs e)
         {
             try
             {
-                _logic.AddSpecies(name, description);
+                var species = _logic.GetSpeciesById(e.SpeciesId);
+                if (species != null)
+                {
+                    _logic.DeleteSpecies(e.SpeciesId);
+                    _view.ShowMessage($"Раса {species.Name} удалена", "Успех");
+                    LoadHeroes(); 
+                }
+                else
+                {
+                    _view.ShowError("Раса не найдена");
+                }
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при добавлении расы: {ex.Message}");
+                _view.ShowError($"Ошибка при удалении расы: {ex.Message}");
             }
         }
 
-        public void UpdateSpecies(Species species)
+        private void OnSpeciesUpdated(SpeciesUpdatedEventArgs e)
         {
             try
             {
+                var species = new Species
+                {
+                    Id = e.SpeciesId,
+                    Name = e.Name,
+                    Description = e.Description
+                };
+
                 _logic.UpdateSpecies(species);
+                _view.ShowMessage($"Раса {e.Name} обновлена", "Успех");
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при обновлении расы: {ex.Message}");
+                _view.ShowError($"Ошибка при обновлении расы: {ex.Message}");
             }
         }
 
-        public void DeleteSpecies(int id)
+        public void RequestStatistics()
         {
             try
             {
-                _logic.DeleteSpecies(id);
+                var stats = _heroService.GetStatistics();
+                _view.ShowStatistics(stats);
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Ошибка при удалении расы: {ex.Message}");
+                _view.ShowError($"Ошибка при получении статистики: {ex.Message}");
             }
         }
 
-        // Поиск и группировка
-        public List<Hero> FindHeroesByName(string name)
-        {
-            return _logic.FindHeroesByName(name);
-        }
-
-        public Dictionary<string, List<Hero>> GroupHeroesBySpecies()
-        {
-            return _logic.GroupHeroesBySpecies();
-        }
-
-        public Dictionary<string, List<Hero>> GroupHeroesByDamageType()
-        {
-            return _logic.GroupHeroesByDamageType();
-        }
-
-        public List<Hero> GetWoundedHeroes()
-        {
-            return _logic.GetHeroesWithLowHp(50);
-        }
-
-        public List<Hero> GetStrongestHeroes(int count = 3)
-        {
-            return _logic.GetStrongestHeroes(count);
-        }
-
-        // Статистика
-        public HeroStatistics GetStatistics()
-        {
-            return _heroService.GetStatistics();
-        }
-        public List<Hero> GetAllHeroes()
+        public void RequestGroupBySpecies()
         {
             try
             {
-                return _logic.GetListHeros();
+                var grouped = _logic.GroupHeroesBySpecies();
+                _view.ShowGroupedHeroes(grouped, "Герои по расам");
             }
             catch (Exception ex)
             {
-                // Используем метод View для отображения ошибки
-                _view.ShowError($"Ошибка при получении списка героев: {ex.Message}");
-                return new List<Hero>();
+                _view.ShowError($"Ошибка при группировке: {ex.Message}");
             }
         }
-        // Свойства для View
-        public int CurrentPage => _currentPage;
-        public int TotalPages => _totalPages;
-        public int TotalHeroes => _totalHeroes;
-        public bool CanGoToPreviousPage => _currentPage > 1;
-        public bool CanGoToNextPage => _currentPage < _totalPages;
+
+        public void RequestGroupByDamageType()
+        {
+            try
+            {
+                var grouped = _logic.GroupHeroesByDamageType();
+                _view.ShowGroupedHeroes(grouped, "Герои по типу урона");
+            }
+            catch (Exception ex)
+            {
+                _view.ShowError($"Ошибка при группировке: {ex.Message}");
+            }
+        }
+
+        public void RequestWoundedHeroes()
+        {
+            try
+            {
+                var wounded = _logic.GetHeroesWithLowHp(50);
+                _view.ShowHeroSelection(wounded, hero =>
+                {
+                    _view.ShowHeroDetails(hero);
+                });
+            }
+            catch (Exception ex)
+            {
+                _view.ShowError($"Ошибка при получении раненых героев: {ex.Message}");
+            }
+        }
+
+        public void RequestStrongestHeroes()
+        {
+            try
+            {
+                var strongest = _logic.GetStrongestHeroes(3);
+                _view.ShowHeroSelection(strongest, hero =>
+                {
+                    _view.ShowHeroDetails(hero);
+                });
+            }
+            catch (Exception ex)
+            {
+                _view.ShowError($"Ошибка при получении сильнейших героев: {ex.Message}");
+            }
+        }
+
+        public void RequestAllSpecies()
+        {
+            try
+            {
+                var species = _logic.GetAllSpecies();
+                _view.ShowSpeciesList(species);
+            }
+            catch (Exception ex)
+            {
+                _view.ShowError($"Ошибка при получении рас: {ex.Message}");
+            }
+        }
+
+        public void Dispose()
+        {
+            UnsubscribeFromViewEvents();
+        }
     }
 }
