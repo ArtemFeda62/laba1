@@ -19,5 +19,8 @@ class Program
         emp1 = new ForeignDecarator ( emp1, false );
         Console.WriteLine(emp1.GetInfo());
         emp1.SalaryStrategy = new ForeignSrtategy();
+
+        Employee emp2 = new BankEmployeeDecorator (emp, "Сбербанк", "SB12345", "IT-отдел");
+        Console.WriteLine(emp2.GetInfo());
     }
 }

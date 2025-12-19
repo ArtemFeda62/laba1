@@ -9,7 +9,6 @@ namespace Patterns
 {
     public class ForeignDecarator: EmployeeDecorator
     {
-        Employee _employee;
         public bool Russian;
         public ForeignDecarator(Employee employee,bool russian)
             : base(employee)
