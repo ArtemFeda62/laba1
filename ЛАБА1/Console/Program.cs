@@ -1,5 +1,6 @@
 ﻿using Employeers;
 using Patterns;
+using Patterns.Employeers;
 
 class Program
 {
@@ -13,5 +14,10 @@ class Program
         Console.WriteLine($"Зарплата через Сбербанк: {emp.GetSalaryAfterCommission()}");
         emp.SalaryStrategy = new GazprombankStrategy();
         Console.WriteLine($"Зарплата через Газпромбанк: {emp.GetSalaryAfterCommission()}");
+
+        Employee emp1 = new ForeignEmployee { Name = "Jack Black", Salary = 100000 };
+        emp1 = new ForeignDecarator ( emp1, false );
+        Console.WriteLine(emp1.GetInfo());
+        emp1.SalaryStrategy = new ForeignSrtategy();
     }
 }
