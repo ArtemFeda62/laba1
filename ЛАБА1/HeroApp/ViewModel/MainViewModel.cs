@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using System.Windows.Input;
 using HeroApp.WPF.DTO;
 using HeroApp.WPF.View;
+using Shared;
 using Shared.Domain;
 
 
@@ -177,11 +178,8 @@ namespace HeroApp.WPF.ViewModel
         {
             var speciesVm = new SpeciesViewModel();
             ViewManager.ShowDialog<SpeciesViewModel>(speciesVm);
-
-            // После закрытия диалога обновляем список рас в главном окне
             if (speciesVm.Species != null && speciesVm.Species.Any())
             {
-                // Обновляем список рас в главной ViewModel
                 Species.Clear();
                 foreach (var species in speciesVm.Species)
                 {
@@ -223,7 +221,6 @@ namespace HeroApp.WPF.ViewModel
 
             if (result == true)
             {
-                // Создаем героя в бизнес-логике
                 Logic.CreateHero(
                     addHeroVm.Name,
                     addHeroVm.SelectedSpeciesId,
@@ -247,7 +244,6 @@ namespace HeroApp.WPF.ViewModel
 
             if (result == true)
             {
-                // Обновляем героя в бизнес-логике
                 var hero = Logic.GetHero(SelectedHero.Id);
                 if (hero != null)
                 {
@@ -319,7 +315,6 @@ namespace HeroApp.WPF.ViewModel
             }
         }
 
-        // Методы для преобразования между Domain и DTO
         private HeroDto ToHeroDto(Hero hero)
         {
             return new HeroDto

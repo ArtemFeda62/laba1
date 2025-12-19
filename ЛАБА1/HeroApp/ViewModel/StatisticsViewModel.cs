@@ -2,7 +2,6 @@
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Windows.Input;
-using BusinessLogicLayer;
 using HeroApp.WPF.DTO;
 using HeroApp.WPF.View;
 using Ninject;
@@ -44,8 +43,6 @@ namespace HeroApp.WPF.ViewModel
             await ExecuteAsync(() =>
             {
                 Statistics = _heroService.GetStatistics();
-
-                // Заполняем коллекции
                 SpeciesStats.Clear();
                 foreach (var stat in Statistics.SpeciesStats)
                 {
@@ -101,11 +98,10 @@ namespace HeroApp.WPF.ViewModel
 
         private void Close()
         {
-            ViewManager.CloseDialog(this);
+            
         }
     }
 
-    // DTO классы для статистики
     public class SpeciesStatDto
     {
         public string Species { get; set; }

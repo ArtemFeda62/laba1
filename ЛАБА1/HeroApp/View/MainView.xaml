@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
-        xmlns:converters="clr-namespace:HeroApp.WPF.Converters"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         Title="Управление героями - MVVM" 
         Height="700" 
@@ -11,11 +11,6 @@
         WindowStartupLocation="CenterScreen">
 
     <Window.Resources>
-        <converters:GreaterThanConverter x:Key="GreaterThanConverter"/>
-        <converters:LessThanConverter x:Key="LessThanConverter"/>
-        <converters:HpToColorConverter x:Key="HpToColorConverter"/>
-        <converters:BoolToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
-
         <Style TargetType="Button">
             <Setter Property="Margin" Value="4"/>
             <Setter Property="Padding" Value="8,4"/>
@@ -51,26 +46,26 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <!-- Панель инструментов -->
         <ToolBar Grid.Row="0" Background="LightGray">
             <Button Content="➕ Добавить героя" Command="{Binding AddHeroCommand}" ToolTip="Добавить нового героя"/>
             <Button Content="✏️ Редактировать" Command="{Binding EditHeroCommand}" 
                     ToolTip="Редактировать выбранного героя"
-                    IsEnabled="{Binding SelectedHero, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    IsEnabled="{Binding IsHeroSelected}"/>
+
             <Button Content="🗑️ Удалить" Command="{Binding DeleteHeroCommand}" 
                     ToolTip="Удалить выбранного героя"
-                    IsEnabled="{Binding SelectedHero, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    IsEnabled="{Binding IsHeroSelected}"/>
+
             <Button Content="⚔️ Нанести урон" Command="{Binding HitHeroCommand}" 
                     ToolTip="Нанести урон выбранному герою"
-                    IsEnabled="{Binding SelectedHero, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                    IsEnabled="{Binding IsHeroSelected}"/>
+
             <Separator/>
             <Button Content="📊 Статистика" Command="{Binding ShowStatisticsCommand}" ToolTip="Показать статистику"/>
             <Button Content="👥 Показать расы" Command="{Binding ShowSpeciesCommand}" ToolTip="Показать все расы"/>
             <Separator/>
             <Button Content="🔄 Обновить" Command="{Binding RefreshCommand}" ToolTip="Обновить данные"/>
         </ToolBar>
-
-        <!-- Поиск и фильтры -->
         <Border Grid.Row="1" Background="AliceBlue" Padding="10" Margin="0,2,0,2">
             <StackPanel Orientation="Horizontal">
                 <Label Content="Поиск:" FontWeight="Bold"/>
@@ -87,22 +82,18 @@
                           SelectedValuePath="Id"
                           Width="120"
                           ToolTip="Фильтр по расе">
-                    <ComboBoxItem Content="Все расы" IsSelected="True"/>
+                    <ComboBoxItem Content="Все расы"/>
                 </ComboBox>
 
                 <Separator Width="20" Visibility="Hidden"/>
 
                 <Label Content="Состояние:" FontWeight="Bold" Margin="20,0,0,0"/>
-                <ComboBox Width="100" ToolTip="Фильтр по состоянию">
-                    <ComboBoxItem Content="Все"/>
-                    <ComboBoxItem Content="Здоровые"/>
-                    <ComboBoxItem Content="Раненые"/>
-                    <ComboBoxItem Content="Мертвые"/>
-                </ComboBox>
+                <ComboBox ItemsSource="{Binding StatusFilterOptions}"
+                          SelectedValue="{Binding SelectedStatusFilter}"
+                          Width="100" 
+                          ToolTip="Фильтр по состоянию"/>
             </StackPanel>
         </Border>
-
-        <!-- Список героев -->
         <DataGrid Grid.Row="2" 
                   ItemsSource="{Binding Heroes}" 
                   SelectedItem="{Binding SelectedHero}"
@@ -110,23 +101,27 @@
                   AutoGenerateColumns="False"
                   CanUserAddRows="False"
                   CanUserDeleteRows="False"
-                  IsReadOnly="True"
-                  RowDetailsVisibilityMode="VisibleWhenSelected">
+                  IsReadOnly="True">
 
             <DataGrid.Columns>
                 <DataGridTextColumn Header="ID" Binding="{Binding Id}" Width="50" IsReadOnly="True"/>
                 <DataGridTextColumn Header="Имя" Binding="{Binding Name}" Width="150"/>
                 <DataGridTextColumn Header="Раса" Binding="{Binding SpeciesName}" Width="120"/>
-                <DataGridTextColumn Header="HP" Width="80">
-                    <DataGridTextColumn.Binding>
-                        <MultiBinding StringFormat="{}{0:F1}">
-                            <Binding Path="Hp"/>
-                        </MultiBinding>
-                    </DataGridTextColumn.Binding>
+                <DataGridTextColumn Header="HP" Width="80" Binding="{Binding Hp, StringFormat=F1}">
                     <DataGridTextColumn.ElementStyle>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="{Binding Hp, Converter={StaticResource HpToColorConverter}}"/>
                             <Setter Property="FontWeight" Value="Bold"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Hp}" Value="0">
+                                    <Setter Property="Foreground" Value="Gray"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Hp}" Value="{x:Static sys:Double.NaN}">
+                                    <Setter Property="Foreground" Value="Red"/>
+                                </DataTrigger>
+                                <Trigger Property="Text" Value="">
+                                    <Setter Property="Foreground" Value="Orange"/>
+                                </Trigger>
+                            </Style.Triggers>
                         </Style>
                     </DataGridTextColumn.ElementStyle>
                 </DataGridTextColumn>
@@ -151,48 +146,19 @@
                         <DataTrigger Binding="{Binding Hp}" Value="{x:Static sys:Double.NaN}">
                             <Setter Property="Background" Value="LightCoral"/>
                         </DataTrigger>
-                        <MultiDataTrigger>
-                            <MultiDataTrigger.Conditions>
-                                <Condition Binding="{Binding Hp}" Value="{x:Null}"/>
-                            </MultiDataTrigger.Conditions>
-                            <Setter Property="Background" Value="LightYellow"/>
-                        </MultiDataTrigger>
                     </Style.Triggers>
                 </Style>
             </DataGrid.RowStyle>
-
-            <DataGrid.RowDetailsTemplate>
-                <DataTemplate>
-                    <Border Background="LightYellow" Padding="10" Margin="10">
-                        <StackPanel Orientation="Vertical">
-                            <TextBlock Text="{Binding Name}" FontSize="14" FontWeight="Bold" Margin="0,0,0,5"/>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="Раса: " FontWeight="Bold"/>
-                                <TextBlock Text="{Binding SpeciesName}"/>
-                                <TextBlock Text=" | " Margin="10,0,10,0"/>
-                                <TextBlock Text="Сила: " FontWeight="Bold"/>
-                                <TextBlock Text="{Binding Strange}"/>
-                                <TextBlock Text=" | " Margin="10,0,10,0"/>
-                                <TextBlock Text="HP: " FontWeight="Bold"/>
-                                <TextBlock Text="{Binding Hp, StringFormat=F1}"/>
-                            </StackPanel>
-                            <TextBlock Text="{Binding TypeOfDamage}" FontStyle="Italic" Margin="0,5,0,0"/>
-                        </StackPanel>
-                    </Border>
-                </DataTemplate>
-            </DataGrid.RowDetailsTemplate>
         </DataGrid>
-
-        <!-- Пагинация -->
         <Border Grid.Row="3" Background="WhiteSmoke" Padding="10">
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <Button Content="⏪ Первая" 
                         Command="{Binding FirstPageCommand}"
-                        IsEnabled="{Binding CurrentPage, Converter={StaticResource GreaterThanConverter}, ConverterParameter=1}"/>
+                        IsEnabled="{Binding CanGoToFirstPage}"/>
 
                 <Button Content="◀️ Назад" 
                         Command="{Binding PreviousPageCommand}"
-                        IsEnabled="{Binding CurrentPage, Converter={StaticResource GreaterThanConverter}, ConverterParameter=1}"/>
+                        IsEnabled="{Binding CanGoToPreviousPage}"/>
 
                 <TextBlock Text="{Binding CurrentPage}" 
                            VerticalAlignment="Center" 
@@ -208,18 +174,18 @@
 
                 <Button Content="Вперёд ▶️" 
                         Command="{Binding NextPageCommand}"
-                        IsEnabled="{Binding CurrentPage, Converter={StaticResource LessThanConverter}, ConverterParameter={Binding TotalPages}}"/>
+                        IsEnabled="{Binding CanGoToNextPage}"/>
 
                 <Button Content="Последняя ⏩" 
                         Command="{Binding LastPageCommand}"
-                        IsEnabled="{Binding CurrentPage, Converter={StaticResource LessThanConverter}, ConverterParameter={Binding TotalPages}}"/>
+                        IsEnabled="{Binding CanGoToLastPage}"/>
 
                 <Separator Width="30" Visibility="Hidden"/>
 
                 <Label Content="Размер страницы:" VerticalAlignment="Center"/>
                 <ComboBox SelectedItem="{Binding PageSize}" Width="70" Margin="5">
                     <ComboBox.ItemsSource>
-                        <x:Array Type="sys:Int32" xmlns:sys="clr-namespace:System;assembly=mscorlib">
+                        <x:Array Type="sys:Int32">
                             <sys:Int32>5</sys:Int32>
                             <sys:Int32>10</sys:Int32>
                             <sys:Int32>20</sys:Int32>
@@ -237,7 +203,6 @@
             </StackPanel>
         </Border>
 
-        <!-- Статус бар -->
         <StatusBar Grid.Row="4" Background="LightGray">
             <StatusBarItem>
                 <TextBlock Text="{Binding StatusMessage}" FontStyle="Italic"/>
@@ -246,12 +211,12 @@
                 <StackPanel Orientation="Horizontal">
                     <ProgressBar Width="100" Height="16" 
                                  IsIndeterminate="{Binding IsBusy}" 
-                                 Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}}"/>
+                                 Visibility="{Binding IsBusy}"/>
                     <TextBlock Text="Готово" 
-                               Visibility="{Binding IsBusy, Converter={StaticResource BoolToVisibilityConverter}, ConverterParameter=invert}"
+                               Visibility="{Binding IsNotBusy}"
                                Margin="10,0"/>
                 </StackPanel>
             </StatusBarItem>
         </StatusBar>
     </Grid>
-</Window>–
+</Window>

@@ -1,9 +1,9 @@
-﻿using System;
+﻿using BusinessLogicLayer;
+using Ninject;
+using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
-using BusinessLogicLayer;
-using Ninject;
 
 namespace HeroApp.WPF.ViewModel
 {
@@ -60,7 +60,6 @@ namespace HeroApp.WPF.ViewModel
             catch (Exception ex)
             {
                 StatusMessage = $"Ошибка: {ex.Message}";
-                // Здесь можно добавить логирование
             }
             finally
             {
